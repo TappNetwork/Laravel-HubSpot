@@ -61,7 +61,7 @@ trait HubspotContact
         }
 
         try {
-            $map = property_exists($model, 'hubspotUpdateMap') && !empty($model->hubspotUpdateMap)
+            $map = property_exists($model, 'hubspotUpdateMap') && ! empty($model->hubspotUpdateMap)
                 ? $model->hubspotUpdateMap
                 : $model->hubspotMap;
 
