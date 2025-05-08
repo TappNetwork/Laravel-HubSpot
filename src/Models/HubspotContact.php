@@ -15,6 +15,7 @@ trait HubspotContact
     // TODO put these in an interface
     // public array $hubspotMap = [];
     // public string $hubspotCompanyRelation = '';
+    // public array $hubspotUpdateMap = [];
 
     public static function bootHubspotContact(): void
     {
@@ -60,7 +61,11 @@ trait HubspotContact
         }
 
         try {
-            $hubspotContact = Hubspot::crm()->contacts()->basicApi()->update($model->hubspot_id, $model->hubspotPropertiesObject($model->hubspotMap));
+            $map = property_exists($model, 'hubspotUpdateMap') && !empty($model->hubspotUpdateMap)
+                ? $model->hubspotUpdateMap
+                : $model->hubspotMap;
+
+            $hubspotContact = Hubspot::crm()->contacts()->basicApi()->update($model->hubspot_id, $model->hubspotPropertiesObject($map));
         } catch (ApiException $e) {
             Log::error('Hubspot contact update failed', [
                 'email' => $model->email,
