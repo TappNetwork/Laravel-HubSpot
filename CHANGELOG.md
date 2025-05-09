@@ -2,6 +2,19 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.0.14 - 2025-05-09
+
+### What's Changed
+
+* update readme to reflect proper hubspot namespace by @johnwesely in https://github.com/TappNetwork/Laravel-HubSpot/pull/13
+* allow different property groups for update and create by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/15
+
+### New Contributors
+
+* @johnwesely made their first contribution in https://github.com/TappNetwork/Laravel-HubSpot/pull/13
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.0.13...v1.0.14
+
 ## v1.0.13 - 2025-02-06
 
 **Full Changelog**: https://github.com/TappNetwork/Laravel-Hubspot/compare/v1.0.12...v1.0.13
