@@ -38,6 +38,7 @@ class SyncHubspotContacts extends Command
     {
         $contactModel = $this->argument('model');
 
+        /** @phpstan-ignore-next-line */
         $contacts = $contactModel::all();
 
         foreach ($contacts as $contact) {

@@ -57,7 +57,8 @@ class SyncHubspotProperties extends Command
 
         $hubspotProperties = collect($response->getResults())->pluck('name');
 
-        $syncProperties = array_keys((new $model)->hubspotMap);
+        // Use the hubspotProperties method to get the property keys
+        $syncProperties = array_keys((new $model)->hubspotProperties((new $model)->hubspotMap));
 
         $missingProperties = collect($syncProperties)->diff($hubspotProperties);
 
