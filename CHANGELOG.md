@@ -2,6 +2,16 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.0.15 - 2025-07-08
+
+### What's Changed
+
+* Bump dependabot/fetch-metadata from 2.3.0 to 2.4.0 by @dependabot in https://github.com/TappNetwork/Laravel-HubSpot/pull/16
+* Use HubSpot properties method instead of array for property sync. by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/19
+* Hubspot update map by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/20
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.0.14...v1.0.15
+
 ## v1.0.14 - 2025-05-09
 
 ### What's Changed
