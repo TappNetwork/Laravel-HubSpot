@@ -8,6 +8,11 @@ use Tapp\LaravelHubspot\LaravelHubspotServiceProvider;
 
 class TestCase extends Orchestra
 {
+    /**
+     * @var \Illuminate\Testing\TestResponse|null
+     */
+    public static $latestResponse;
+
     protected function setUp(): void
     {
         parent::setUp();
