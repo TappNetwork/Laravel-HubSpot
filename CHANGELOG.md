@@ -2,6 +2,15 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.1.0 - 2025-08-01
+
+### What's Changed
+
+* Bump aglipanci/laravel-pint-action from 2.5 to 2.6 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/21
+* Add hubspot id to config by @swilla in https://github.com/TappNetwork/Laravel-HubSpot/pull/22
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.0.15...v1.1.0
+
 ## v1.0.15 - 2025-07-08
 
 ### What's Changed
