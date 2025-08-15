@@ -117,7 +117,10 @@ trait HubspotContact
         if ($model->hubspot_id !== $hubspotContact['id']) {
             $model->hubspot_id = $hubspotContact['id'];
             // Save the corrected hubspot_id to prevent future 404s
-            $model->saveQuietly();
+            // Use direct database update to avoid triggering model events
+            $model->getConnection()->table($model->getTable())
+                ->where('id', $model->id)
+                ->update(['hubspot_id' => $hubspotContact['id']]);
         }
 
         // outside of try block
@@ -146,7 +149,10 @@ trait HubspotContact
 
             // Update the hubspot_id and save it to prevent future 404s
             $model->hubspot_id = $hubspotContact['id'];
-            $model->saveQuietly();
+            // Use direct database update to avoid triggering model events
+            $model->getConnection()->table($model->getTable())
+                ->where('id', $model->id)
+                ->update(['hubspot_id' => $hubspotContact['id']]);
         } catch (ApiException $e) {
             Log::debug('Hubspot contact not found with email', [
                 'email' => $model->email,
