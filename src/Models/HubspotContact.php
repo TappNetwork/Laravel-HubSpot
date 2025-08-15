@@ -37,7 +37,7 @@ trait HubspotContact
                 'response' => $e->getResponseBody(),
             ]);
 
-            return;
+            throw $e;
         }
 
         $hubspotCompany = $model->getRelationValue($model->hubspotCompanyRelation);
@@ -73,7 +73,7 @@ trait HubspotContact
                 'response' => $e->getResponseBody(),
             ]);
 
-            return;
+            throw $e;
         }
 
         $hubspotCompany = $model->getRelationValue($model->hubspotCompanyRelation);
@@ -112,6 +112,14 @@ trait HubspotContact
             return static::createHubspotContact($model);
         }
 
+        // If we found a contact by email, update the model's hubspot_id
+        // This ensures we use the correct ID for the update
+        if ($model->hubspot_id !== $hubspotContact['id']) {
+            $model->hubspot_id = $hubspotContact['id'];
+            // Save the corrected hubspot_id to prevent future 404s
+            $model->saveQuietly();
+        }
+
         // outside of try block
         return static::updateHubspotContact($model);
     }
@@ -136,8 +144,9 @@ trait HubspotContact
         try {
             $hubspotContact = Hubspot::crm()->contacts()->basicApi()->getById($model->email, null, null, null, false, 'email');
 
-            // dont save to prevent loop from model event
+            // Update the hubspot_id and save it to prevent future 404s
             $model->hubspot_id = $hubspotContact['id'];
+            $model->saveQuietly();
         } catch (ApiException $e) {
             Log::debug('Hubspot contact not found with email', [
                 'email' => $model->email,
