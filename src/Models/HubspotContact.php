@@ -112,12 +112,6 @@ trait HubspotContact
             return static::createHubspotContact($model);
         }
 
-        // If we found a contact by email, update the model's hubspot_id
-        // This ensures we use the correct ID for the update
-        if ($model->hubspot_id !== $hubspotContact['id']) {
-            $model->hubspot_id = $hubspotContact['id'];
-        }
-
         // outside of try block
         return static::updateHubspotContact($model);
     }
