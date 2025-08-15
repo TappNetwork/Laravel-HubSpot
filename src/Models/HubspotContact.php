@@ -116,15 +116,20 @@ trait HubspotContact
         // This ensures we use the correct ID for the update
         if ($model->hubspot_id !== $hubspotContact['id']) {
             $model->hubspot_id = $hubspotContact['id'];
-            // Save the corrected hubspot_id to prevent future 404s
-            // Use direct database update to avoid triggering model events
-            $model->getConnection()->table($model->getTable())
-                ->where('id', $model->id)
-                ->update(['hubspot_id' => $hubspotContact['id']]);
         }
 
         // outside of try block
         return static::updateHubspotContact($model);
+    }
+
+    /**
+     * Save hubspot_id to database using direct update to avoid triggering model events
+     */
+    private static function saveHubspotId($model, $hubspotId): void
+    {
+        $model->getConnection()->table($model->getTable())
+            ->where('id', $model->id)
+            ->update(['hubspot_id' => $hubspotId]);
     }
 
     public static function getContactByEmailOrId($model)
@@ -149,10 +154,7 @@ trait HubspotContact
 
             // Update the hubspot_id and save it to prevent future 404s
             $model->hubspot_id = $hubspotContact['id'];
-            // Use direct database update to avoid triggering model events
-            $model->getConnection()->table($model->getTable())
-                ->where('id', $model->id)
-                ->update(['hubspot_id' => $hubspotContact['id']]);
+            static::saveHubspotId($model, $hubspotContact['id']);
         } catch (ApiException $e) {
             Log::debug('Hubspot contact not found with email', [
                 'email' => $model->email,
