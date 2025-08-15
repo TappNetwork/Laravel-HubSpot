@@ -61,15 +61,15 @@ class SyncHubspotProperties extends Command
         $syncProperties = array_keys((new $model)->hubspotProperties((new $model)->hubspotMap));
 
         // Output sync properties (from the model)
-        $this->line('Sync properties (from model): ' . implode(', ', $syncProperties));
+        $this->line('Sync properties (from model): '.implode(', ', $syncProperties));
 
         $missingProperties = collect($syncProperties)->diff($hubspotProperties);
 
         // Output all current HubSpot properties
-        $this->line('All HubSpot properties: ' . $hubspotProperties->implode(', '));
+        $this->line('All HubSpot properties: '.$hubspotProperties->implode(', '));
 
         // Output missing properties
-        $this->line('Missing properties: ' . $missingProperties->implode(', '));
+        $this->line('Missing properties: '.$missingProperties->implode(', '));
 
         if ($missingProperties->isNotEmpty()) {
             $this->line("creating {$object} properties: ".$missingProperties->implode(', '));
