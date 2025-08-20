@@ -48,7 +48,14 @@ trait HubspotContact
         }
 
         if ($hubspotCompany && $hubspotCompany->hubspot_id) {
-            static::associateCompanyWithContact($hubspotCompany->hubspot_id, $hubspotContact['id']);
+            if (!isset($hubspotContact['id'])) {
+                Log::warning('HubSpot contact is missing id. Cannot assign company.', [
+                    'email' => $model->email,
+                    'hubspot_contact' => $hubspotContact,
+                ]);
+            } else {
+                static::associateCompanyWithContact($hubspotCompany->hubspot_id, $hubspotContact['id']);
+            }
         }
 
         return $hubspotContact;
@@ -69,8 +76,11 @@ trait HubspotContact
         } catch (ApiException $e) {
             Log::error('Hubspot contact update failed', [
                 'email' => $model->email,
+                'hubspot_id' => $model->hubspot_id,
                 'message' => $e->getMessage(),
                 'response' => $e->getResponseBody(),
+                'status_code' => $e->getCode(),
+                'properties_being_sent' => $model->hubspotProperties($map),
             ]);
 
             throw $e;
@@ -84,7 +94,14 @@ trait HubspotContact
         }
 
         if ($hubspotCompany && $hubspotCompany->hubspot_id) {
-            static::associateCompanyWithContact($hubspotCompany->hubspot_id, $hubspotContact['id']);
+            if (!isset($hubspotContact['id'])) {
+                Log::warning('HubSpot contact is missing id. Cannot assign company.', [
+                    'email' => $model->email,
+                    'hubspot_contact' => $hubspotContact,
+                ]);
+            } else {
+                static::associateCompanyWithContact($hubspotCompany->hubspot_id, $hubspotContact['id']);
+            }
         }
 
         return $hubspotContact;
@@ -169,9 +186,25 @@ trait HubspotContact
 
         foreach ($map as $key => $value) {
             if (strpos($value, '.')) {
-                $properties[$key] = data_get($this, $value);
+                $propertyValue = data_get($this, $value);
             } else {
-                $properties[$key] = $this->$value;
+                $propertyValue = $this->$value;
+            }
+
+            // Convert Carbon objects to ISO 8601 format for HubSpot
+            if ($propertyValue instanceof \Carbon\Carbon) {
+                $properties[$key] = $propertyValue->toISOString();
+            }
+            // Convert other objects to string if they have __toString method
+            elseif (is_object($propertyValue) && method_exists($propertyValue, '__toString')) {
+                $properties[$key] = (string) $propertyValue;
+            }
+            // Skip null values to avoid sending them to HubSpot
+            elseif (is_null($propertyValue)) {
+                continue;
+            }
+            else {
+                $properties[$key] = $propertyValue;
             }
         }
 
@@ -196,9 +229,15 @@ trait HubspotContact
         try {
             return Hubspot::crm()->associations()->v4()->basicApi()->create('contact', $contactId, 'company', $companyId, [$associationSpec]);
         } catch (AssociationsApiException $e) {
-            // dd($companyId, $contactId);
-            // dd($e);
-            throw ($e);
+            Log::error('Failed to associate company with contact', [
+                'company_id' => $companyId,
+                'contact_id' => $contactId,
+                'message' => $e->getMessage(),
+                'response' => $e->getResponseBody(),
+            ]);
+
+            // Don't throw the exception - just log it and continue
+            return null;
         }
     }
 }

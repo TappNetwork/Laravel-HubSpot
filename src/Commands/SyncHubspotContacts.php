@@ -41,9 +41,33 @@ class SyncHubspotContacts extends Command
         /** @phpstan-ignore-next-line */
         $contacts = $contactModel::all();
 
-        foreach ($contacts as $contact) {
-            HubspotContact::updateOrCreateHubspotContact($contact);
+        $totalContacts = $contacts->count();
+
+        if ($totalContacts === 0) {
+            $this->info('No contacts found to sync.');
+            return Command::SUCCESS;
         }
+
+        $this->info("Starting HubSpot contact sync for {$totalContacts} contacts...");
+
+        $progressBar = $this->output->createProgressBar($totalContacts);
+        $progressBar->setFormat('verbose');
+        $progressBar->start();
+
+        foreach ($contacts as $contact) {
+            try {
+                HubspotContact::updateOrCreateHubspotContact($contact);
+                $progressBar->advance();
+            } catch (\Exception $e) {
+                $this->newLine();
+                $this->error("Failed to sync contact {$contact->email}: " . $e->getMessage());
+                $progressBar->advance();
+            }
+        }
+
+        $progressBar->finish();
+        $this->newLine(2);
+        $this->info('HubSpot contact sync completed!');
 
         return Command::SUCCESS;
     }
