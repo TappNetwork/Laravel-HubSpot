@@ -2,6 +2,15 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.1.1 - 2025-08-20
+
+### What's Changed
+
+* Bump stefanzweifel/git-auto-commit-action from 5 to 6 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/18
+* Sync Updates: Fix hubspot_id persistence and API exception handling by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/23
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.1.0...v1.1.1
+
 ## v1.1.0 - 2025-08-01
 
 ### What's Changed
