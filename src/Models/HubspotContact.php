@@ -48,7 +48,7 @@ trait HubspotContact
         }
 
         if ($hubspotCompany && $hubspotCompany->hubspot_id) {
-            if (!isset($hubspotContact['id'])) {
+            if (! isset($hubspotContact['id'])) {
                 Log::warning('HubSpot contact is missing id. Cannot assign company.', [
                     'email' => $model->email,
                     'hubspot_contact' => $hubspotContact,
@@ -94,7 +94,7 @@ trait HubspotContact
         }
 
         if ($hubspotCompany && $hubspotCompany->hubspot_id) {
-            if (!isset($hubspotContact['id'])) {
+            if (! isset($hubspotContact['id'])) {
                 Log::warning('HubSpot contact is missing id. Cannot assign company.', [
                     'email' => $model->email,
                     'hubspot_contact' => $hubspotContact,
@@ -202,8 +202,7 @@ trait HubspotContact
             // Skip null values to avoid sending them to HubSpot
             elseif (is_null($propertyValue)) {
                 continue;
-            }
-            else {
+            } else {
                 $properties[$key] = $propertyValue;
             }
         }

@@ -46,8 +46,9 @@ class SyncHubspotProperties extends Command
         // Get the model class from option or use a default
         $modelClass = $this->option('model') ?: config('hubspot.default_model', 'App\\Models\\User');
 
-        if (!class_exists($modelClass)) {
+        if (! class_exists($modelClass)) {
             $this->error("Model class {$modelClass} does not exist.");
+
             return Command::FAILURE;
         }
 

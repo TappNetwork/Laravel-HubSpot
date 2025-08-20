@@ -177,8 +177,7 @@ trait HubspotCompany
             // Skip null values to avoid sending them to HubSpot
             elseif (is_null($propertyValue)) {
                 continue;
-            }
-            else {
+            } else {
                 $properties[$key] = $propertyValue;
             }
         }

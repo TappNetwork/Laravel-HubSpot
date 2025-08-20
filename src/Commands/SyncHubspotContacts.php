@@ -45,6 +45,7 @@ class SyncHubspotContacts extends Command
 
         if ($totalContacts === 0) {
             $this->info('No contacts found to sync.');
+
             return Command::SUCCESS;
         }
 
@@ -60,7 +61,7 @@ class SyncHubspotContacts extends Command
                 $progressBar->advance();
             } catch (\Exception $e) {
                 $this->newLine();
-                $this->error("Failed to sync contact {$contact->email}: " . $e->getMessage());
+                $this->error("Failed to sync contact {$contact->email}: ".$e->getMessage());
                 $progressBar->advance();
             }
         }
