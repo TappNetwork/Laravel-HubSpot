@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.1.2 - 2025-08-20
+
+### What's Changed
+
+* company sync updates by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/24
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.1.1...v1.1.2
+
 ## v1.1.1 - 2025-08-20
 
 ### What's Changed
