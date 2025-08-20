@@ -17,7 +17,7 @@ class SyncHubspotProperties extends Command
      *
      * @var string
      */
-    protected $signature = 'hubspot:sync-properties';
+    protected $signature = 'hubspot:sync-properties {--model= : The model class to sync properties for}';
 
     /**
      * The console command description.
@@ -43,9 +43,16 @@ class SyncHubspotProperties extends Command
     {
         $this->createPropertyGroup('contact', config('hubspot.property_group'), config('hubspot.property_group_label'));
 
-        // TODO code smell using App here
-        // @phpstan-ignore-next-line
-        $this->syncProperties('contact', \App\Models\User::class, config('hubspot.property_group'));
+        // Get the model class from option or use a default
+        $modelClass = $this->option('model') ?: config('hubspot.default_model', 'App\\Models\\User');
+
+        if (! class_exists($modelClass)) {
+            $this->error("Model class {$modelClass} does not exist.");
+
+            return Command::FAILURE;
+        }
+
+        $this->syncProperties('contact', $modelClass, config('hubspot.property_group'));
 
         return Command::SUCCESS;
     }

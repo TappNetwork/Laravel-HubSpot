@@ -28,11 +28,15 @@ trait HubspotCompany
             $hubspotCompany = Hubspot::crm()->companies()->basicApi()->create($model->hubspotPropertiesObject($model->hubspotMap));
 
             $model->hubspot_id = $hubspotCompany['id'];
+            static::saveHubspotId($model, $hubspotCompany['id']);
         } catch (ApiException $e) {
-            throw new \Exception('Error creating hubspot company: '.$e->getResponseBody());
-            Log::error('Error creating hubspot company: '.$e->getResponseBody());
+            Log::error('Error creating hubspot company', [
+                'name' => $model->name,
+                'message' => $e->getMessage(),
+                'response' => $e->getResponseBody(),
+            ]);
 
-            return;
+            throw $e;
         }
 
         return $hubspotCompany;
@@ -41,14 +45,23 @@ trait HubspotCompany
     public static function updateHubspotCompany($model)
     {
         if (! $model->hubspot_id) {
-            throw new \Exception('Hubspot ID missing. Cannot update company: '.$model->email);
+            throw new \Exception('Hubspot ID missing. Cannot update company: '.$model->name);
         }
 
         try {
-            return Hubspot::crm()->companies()->basicApi()->update($model->hubspot_id, $model->hubspotPropertiesObject($model->hubspotMap));
+            $hubspotCompany = Hubspot::crm()->companies()->basicApi()->update($model->hubspot_id, $model->hubspotPropertiesObject($model->hubspotMap));
         } catch (ApiException $e) {
-            Log::error('Hubspot company update failed', ['email' => $model->email]);
+            Log::error('Hubspot company update failed', [
+                'name' => $model->name,
+                'hubspot_id' => $model->hubspot_id,
+                'message' => $e->getMessage(),
+                'response' => $e->getResponseBody(),
+            ]);
+
+            throw $e;
         }
+
+        return $hubspotCompany;
     }
 
     /*
@@ -67,19 +80,16 @@ trait HubspotCompany
         //     return;
         // }
 
-        $hubspotCompany = static::getCompanyById($model);
-
-        // TODO if no hubspot id or if id fetch failed, try searching by name
+        $hubspotCompany = static::getCompanyByIdOrName($model);
 
         if (! $hubspotCompany) {
             return static::createHubspotCompany($model);
         }
 
-        // outside of try block
         return static::updateHubspotCompany($model);
     }
 
-    public static function getCompanyById($model)
+    public static function getCompanyByIdOrName($model)
     {
         $hubspotCompany = null;
 
@@ -87,11 +97,59 @@ trait HubspotCompany
             try {
                 return Hubspot::crm()->companies()->basicApi()->getById($model->hubspot_id);
             } catch (ApiException $e) {
-                Log::debug('Hubspot company not found with id', ['id' => $model->id]);
+                Log::debug('Hubspot company not found with id', [
+                    'id' => $model->id,
+                    'hubspot_id' => $model->hubspot_id,
+                    'message' => $e->getMessage(),
+                    'response' => $e->getResponseBody(),
+                ]);
             }
         }
 
+        // if no hubspot id or if id fetch failed, try searching by name
+        try {
+            $filter = new Filter([
+                'value' => $model->name,
+                'property_name' => 'name',
+                'operator' => 'EQ',
+            ]);
+
+            $filterGroup = new FilterGroup([
+                'filters' => [$filter],
+            ]);
+
+            $companySearch = new CompanySearch([
+                'filter_groups' => [$filterGroup],
+            ]);
+
+            $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
+
+            if ($searchResults['total'] > 0) {
+                $hubspotCompany = $searchResults['results'][0];
+
+                // Update the hubspot_id and save it to prevent future 404s
+                $model->hubspot_id = $hubspotCompany['id'];
+                static::saveHubspotId($model, $hubspotCompany['id']);
+            }
+        } catch (ApiException $e) {
+            Log::debug('Hubspot company not found with name', [
+                'name' => $model->name,
+                'message' => $e->getMessage(),
+                'response' => $e->getResponseBody(),
+            ]);
+        }
+
         return $hubspotCompany;
+    }
+
+    /**
+     * Save hubspot_id to database using direct update to avoid triggering model events
+     */
+    private static function saveHubspotId($model, $hubspotId): void
+    {
+        $model->getConnection()->table($model->getTable())
+            ->where('id', $model->id)
+            ->update(['hubspot_id' => $hubspotId]);
     }
 
     /**
@@ -103,9 +161,24 @@ trait HubspotCompany
 
         foreach ($map as $key => $value) {
             if (strpos($value, '.')) {
-                $properties[$key] = data_get($this, $value);
+                $propertyValue = data_get($this, $value);
             } else {
-                $properties[$key] = $this->$value;
+                $propertyValue = $this->$value;
+            }
+
+            // Convert Carbon objects to ISO 8601 format for HubSpot
+            if ($propertyValue instanceof \Carbon\Carbon) {
+                $properties[$key] = $propertyValue->toISOString();
+            }
+            // Convert other objects to string if they have __toString method
+            elseif (is_object($propertyValue) && method_exists($propertyValue, '__toString')) {
+                $properties[$key] = (string) $propertyValue;
+            }
+            // Skip null values to avoid sending them to HubSpot
+            elseif (is_null($propertyValue)) {
+                continue;
+            } else {
+                $properties[$key] = $propertyValue;
             }
         }
 
@@ -149,10 +222,6 @@ trait HubspotCompany
         if ($companyExists) {
             return $searchResults['results'][0];
         } else {
-            $properties = [
-                'na' => $domain,
-            ];
-
             $companyObject = new CompanyObject([
                 'properties' => $properties,
             ]);
