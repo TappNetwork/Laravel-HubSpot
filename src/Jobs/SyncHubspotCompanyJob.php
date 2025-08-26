@@ -238,8 +238,6 @@ class SyncHubspotCompanyJob implements ShouldQueue
         }
     }
 
-
-
     /**
      * Convert a value to a string suitable for HubSpot API
      */
@@ -260,6 +258,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
                 if (isset($value['en'])) {
                     return $value['en'];
                 }
+
                 // If no 'en' key, get the first value
                 return (string) reset($value);
             }
