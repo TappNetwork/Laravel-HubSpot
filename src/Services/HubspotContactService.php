@@ -2,9 +2,6 @@
 
 namespace Tapp\LaravelHubspot\Services;
 
-use HubSpot\Client\Crm\Associations\V4\ApiException as AssociationsApiException;
-use HubSpot\Client\Crm\Associations\V4\Model\AssociationSpec;
-use HubSpot\Client\Crm\Companies\ApiException as CompaniesApiException;
 use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +19,11 @@ class HubspotContactService
 
         try {
             $hubspotContact = Hubspot::crm()->contacts()->basicApi()->create($properties);
+
+            // Check if response is an Error object
+            if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+                throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
+            }
 
             // Update the model with HubSpot ID
             $contactId = is_array($hubspotContact) ? $hubspotContact['id'] : $hubspotContact->getId();
@@ -47,7 +49,7 @@ class HubspotContactService
                     'error' => $e->getMessage(),
                 ]);
 
-                $contact = $this->findContactByEmail($data['email']);
+                $contact = $this->findContact(['email' => $data['email']]);
                 if ($contact && isset($contact['id'])) {
                     // Update the model with existing HubSpot ID
                     $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
@@ -88,7 +90,7 @@ class HubspotContactService
         if (! $this->validateHubspotContactExists($data['hubspot_id'])) {
             // Try to find by email without clearing the invalid ID
             if (! empty($data['email'])) {
-                $contact = $this->findContactByEmail($data['email']);
+                $contact = $this->findContact(['email' => $data['email']]);
                 if ($contact) {
                     // Update with correct hubspot_id and retry
                     $contactId = is_array($contact) ? $contact['id'] : $contact->getId();
@@ -112,6 +114,11 @@ class HubspotContactService
                 $data['hubspot_id'],
                 $properties
             );
+
+            // Check if response is an Error object
+            if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+                throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
+            }
         } catch (ApiException $e) {
             if ($e->getCode() === 400) {
                 $propertiesArray = $this->buildPropertiesArray($map, $data);
@@ -164,52 +171,20 @@ class HubspotContactService
     }
 
     /**
-     * Find contact by email.
-     */
-    protected function findContactByEmail(string $email): ?array
-    {
-        try {
-            $contact = Hubspot::crm()->contacts()->basicApi()->getById($email, null, null, null, false, 'email');
-
-            // Convert SimplePublicObject to array for consistency
-            if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations) {
-                return [
-                    'id' => $contact->getId(),
-                    'properties' => $contact->getProperties() ?? [],
-                ];
-            }
-
-            // If it's already an array, return it
-            if (is_array($contact)) {
-                return $contact;
-            }
-
-            // If it's an object with getId method, convert to array
-            if (is_object($contact) && method_exists($contact, 'getId')) {
-                return [
-                    'id' => $contact->getId(),
-                    'properties' => $contact->getProperties() ?? [],
-                ];
-            }
-
-            // Fallback: try to convert to array
-            return (array) $contact;
-        } catch (ApiException $e) {
-            if ($e->getCode() === 404) {
-                return null;
-            }
-            throw $e;
-        }
-    }
-
-    /**
      * Find a contact by email or ID.
      */
     public function findContact(array $data): ?array
     {
         if (! empty($data['hubspot_id'])) {
             try {
-                return Hubspot::crm()->contacts()->basicApi()->getById($data['hubspot_id']);
+                $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['hubspot_id']);
+
+                // Check if response is an Error object
+                if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+                    throw new \Exception('HubSpot API returned an error: '.$contact->getMessage());
+                }
+
+                return $this->normalizeContactResponse($contact);
             } catch (ApiException $e) {
                 if ($e->getCode() !== 404) {
                     throw $e;
@@ -222,11 +197,16 @@ class HubspotContactService
             try {
                 $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['email'], null, null, null, false, 'email');
 
+                // Check if response is an Error object
+                if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+                    throw new \Exception('HubSpot API returned an error: '.$contact->getMessage());
+                }
+
                 // Update the model with HubSpot ID
                 $contactId = is_array($contact) ? $contact['id'] : $contact->getId();
                 $this->updateModelHubspotId($data['id'] ?? null, $contactId, $data['modelClass'] ?? null);
 
-                return $contact;
+                return $this->normalizeContactResponse($contact);
             } catch (ApiException $e) {
                 if ($e->getCode() !== 404) {
                     throw $e;
@@ -235,6 +215,36 @@ class HubspotContactService
         }
 
         return null;
+    }
+
+    /**
+     * Normalize contact response to consistent array format.
+     */
+    protected function normalizeContactResponse($contact): array
+    {
+        // Convert SimplePublicObject to array for consistency
+        if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations) {
+            return [
+                'id' => $contact->getId(),
+                'properties' => $contact->getProperties() ?? [],
+            ];
+        }
+
+        // If it's already an array, return it
+        if (is_array($contact)) {
+            return $contact;
+        }
+
+        // If it's an object with getId method, convert to array
+        if (is_object($contact) && method_exists($contact, 'getId')) {
+            return [
+                'id' => $contact->getId(),
+                'properties' => $contact->getProperties() ?? [],
+            ];
+        }
+
+        // Fallback: try to convert to array
+        return (array) $contact;
     }
 
     /**
@@ -409,12 +419,14 @@ class HubspotContactService
             return;
         }
 
+        $companyService = app(HubspotCompanyService::class);
+
         // If company doesn't have hubspot_id, create it in HubSpot first
         if (empty($companyData['hubspot_id'])) {
             try {
-                $companyId = $this->createOrFindCompany($companyData);
+                $companyId = $companyService->createOrFindCompany($companyData);
                 if ($companyId) {
-                    $this->associateCompanyWithContact($companyId, $contactId);
+                    $companyService->associateCompanyWithContact($companyId, $contactId);
 
                     // Update the company model with the new hubspot_id
                     $this->updateCompanyHubspotId($companyData['id'] ?? null, $companyId, $data['modelClass'] ?? null);
@@ -432,7 +444,7 @@ class HubspotContactService
 
         // Verify the company exists in HubSpot before association
         try {
-            $this->associateCompanyWithContact($companyData['hubspot_id'], $contactId);
+            $companyService->associateCompanyWithContact($companyData['hubspot_id'], $contactId);
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), 'does not exist in HubSpot')) {
                 Log::warning('Company has invalid HubSpot ID, clearing and recreating', [
@@ -445,9 +457,9 @@ class HubspotContactService
                 $this->updateCompanyHubspotId($companyData['id'] ?? null, null, $data['modelClass'] ?? null);
 
                 // Try to create/find the company again
-                $companyId = $this->createOrFindCompany($companyData);
+                $companyId = $companyService->createOrFindCompany($companyData);
                 if ($companyId) {
-                    $this->associateCompanyWithContact($companyId, $contactId);
+                    $companyService->associateCompanyWithContact($companyId, $contactId);
                     $this->updateCompanyHubspotId($companyData['id'] ?? null, $companyId, $data['modelClass'] ?? null);
                 }
             } else {
@@ -462,355 +474,6 @@ class HubspotContactService
                 throw $e;
             }
         }
-    }
-
-    /**
-     * Associate a company with a contact in HubSpot.
-     */
-    protected function associateCompanyWithContact(string $companyId, string $contactId): void
-    {
-        try {
-            // First verify the company exists in HubSpot
-            try {
-                $company = Hubspot::crm()->companies()->basicApi()->getById($companyId);
-                Log::info('Company verified in HubSpot before association', [
-                    'company_id' => $companyId,
-                    'company_name' => $company->getProperties()['name'] ?? 'unknown',
-                ]);
-            } catch (CompaniesApiException $e) {
-                if ($e->getCode() === 404) {
-                    Log::error('Company does not exist in HubSpot, cannot associate', [
-                        'company_id' => $companyId,
-                        'contact_id' => $contactId,
-                    ]);
-                    throw new \Exception("Company with ID {$companyId} does not exist in HubSpot");
-                }
-                throw $e;
-            } catch (\Exception $e) {
-                // Re-throw any other exceptions
-                throw $e;
-            }
-
-            $associationSpec = new AssociationSpec([
-                'association_category' => 'HUBSPOT_DEFINED',
-                'association_type_id' => 1, // Company to Contact association
-            ]);
-
-            Hubspot::crm()->associations()->v4()->basicApi()->create(
-                'contact',
-                $contactId,
-                'company',
-                $companyId,
-                [$associationSpec]
-            );
-        } catch (AssociationsApiException $e) {
-            Log::error('Failed to associate company with contact', [
-                'company_id' => $companyId,
-                'contact_id' => $contactId,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Create or find a company in HubSpot.
-     */
-    protected function createOrFindCompany(array $companyData): ?string
-    {
-        try {
-            // Extract company name - handle translatable fields
-            $companyName = $this->extractCompanyName($companyData['name'] ?? '');
-
-            Log::info('Looking for existing company', [
-                'company_name' => $companyName,
-                'company_data' => $companyData,
-            ]);
-
-            // First try to find existing company by name
-            try {
-                $existingCompany = $this->findCompanyByName($companyName);
-                if ($existingCompany) {
-                    Log::info('Found existing company', [
-                        'company_name' => $companyName,
-                        'hubspot_id' => $existingCompany['id'],
-                    ]);
-
-                    return $existingCompany['id'];
-                }
-            } catch (CompaniesApiException $e) {
-                // If it's a rate limit, re-throw to let the job retry
-                if ($e->getCode() === 429) {
-                    throw $e;
-                }
-                // For other API errors, log and continue to create
-                Log::warning('API error during company search, will attempt to create', [
-                    'company_name' => $companyName,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
-            Log::info('No existing company found, creating new one', [
-                'company_name' => $companyName,
-            ]);
-
-            // Small delay to prevent race conditions
-            usleep(100000); // 0.1 second delay
-
-            // Double-check if company was created by another process
-            $existingCompany = $this->findCompanyByName($companyName);
-            if ($existingCompany) {
-                Log::info('Company was created by another process', [
-                    'company_name' => $companyName,
-                    'hubspot_id' => $existingCompany['id'],
-                ]);
-
-                return $existingCompany['id'];
-            }
-
-            // Create new company if not found
-            $properties = [
-                'name' => $companyName,
-            ];
-
-            // Add additional properties if available
-            if (! empty($companyData['address'])) {
-                $properties['address'] = $companyData['address'];
-            }
-            if (! empty($companyData['city'])) {
-                $properties['city'] = $companyData['city'];
-            }
-            if (! empty($companyData['state'])) {
-                $properties['state'] = $companyData['state'];
-            }
-            if (! empty($companyData['zip'])) {
-                $properties['zip'] = $companyData['zip'];
-            }
-
-            // Try to create the company, handle duplicates gracefully
-            try {
-                $newCompany = Hubspot::crm()->companies()->basicApi()->create(['properties' => $properties]);
-                $companyId = is_array($newCompany) ? $newCompany['id'] : $newCompany->getId();
-
-                Log::info('Created new company in HubSpot', [
-                    'company_name' => $companyName,
-                    'hubspot_id' => $companyId,
-                ]);
-
-                return $companyId;
-            } catch (CompaniesApiException $e) {
-                // Handle 409 conflict (duplicate company created by another process)
-                if ($e->getCode() === 409) {
-                    Log::info('Company creation conflict, searching for existing company', [
-                        'company_name' => $companyName,
-                    ]);
-
-                    // Wait a moment and search again
-                    usleep(200000); // 0.2 second delay
-                    $existingCompany = $this->findCompanyByName($companyName);
-                    if ($existingCompany) {
-                        Log::info('Found company after conflict resolution', [
-                            'company_name' => $companyName,
-                            'hubspot_id' => $existingCompany['id'],
-                        ]);
-
-                        return $existingCompany['id'];
-                    }
-                }
-
-                // Re-throw other errors
-                throw $e;
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to create or find company in HubSpot', [
-                'company_name' => $companyData['name'] ?? 'unknown',
-                'error' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
-    }
-
-    /**
-     * Find company by name in HubSpot.
-     */
-    protected function findCompanyByName(string $name): ?array
-    {
-        try {
-            // Clean the name for better matching
-            $cleanName = $this->cleanCompanyName($name);
-
-            // First try exact match
-            $filter = new \HubSpot\Client\Crm\Companies\Model\Filter([
-                'value' => $cleanName,
-                'property_name' => 'name',
-                'operator' => 'EQ',
-            ]);
-
-            $filterGroup = new \HubSpot\Client\Crm\Companies\Model\FilterGroup([
-                'filters' => [$filter],
-            ]);
-
-            $companySearch = new \HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest([
-                'filter_groups' => [$filterGroup],
-            ]);
-
-            $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
-
-            if ($searchResults['total'] > 0) {
-                $result = $searchResults['results'][0];
-
-                // Convert object to array if needed
-                if (is_object($result)) {
-                    $result = [
-                        'id' => $result->getId(),
-                        'properties' => $result->getProperties() ?? [],
-                    ];
-                }
-
-                Log::info('Found company by exact name match', [
-                    'search_name' => $cleanName,
-                    'found_name' => $result['properties']['name'] ?? 'unknown',
-                    'company_id' => $result['id'],
-                ]);
-
-                return $result;
-            }
-
-            // If no exact match, try partial match
-            $filter = new \HubSpot\Client\Crm\Companies\Model\Filter([
-                'value' => $cleanName,
-                'property_name' => 'name',
-                'operator' => 'CONTAINS_TOKEN',
-            ]);
-
-            $filterGroup = new \HubSpot\Client\Crm\Companies\Model\FilterGroup([
-                'filters' => [$filter],
-            ]);
-
-            $companySearch = new \HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest([
-                'filter_groups' => [$filterGroup],
-            ]);
-
-            $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
-
-            if ($searchResults['total'] > 0) {
-                // Find the best match by comparing names
-                $bestMatch = $this->findBestNameMatch($cleanName, $searchResults['results']);
-                if ($bestMatch) {
-                    // Convert object to array if needed
-                    if (is_object($bestMatch)) {
-                        $bestMatch = [
-                            'id' => $bestMatch->getId(),
-                            'properties' => $bestMatch->getProperties() ?? [],
-                        ];
-                    }
-
-                    Log::info('Found company by partial name match', [
-                        'search_name' => $cleanName,
-                        'found_name' => $bestMatch['properties']['name'] ?? 'unknown',
-                        'company_id' => $bestMatch['id'],
-                    ]);
-
-                    return $bestMatch;
-                }
-            }
-        } catch (CompaniesApiException $e) {
-            // Handle rate limiting specifically - retry the job
-            if ($e->getCode() === 429) {
-                Log::warning('Rate limit hit while searching for company, will retry', [
-                    'name' => $name,
-                    'error' => $e->getMessage(),
-                ]);
-                throw $e; // Let the job retry mechanism handle it
-            }
-
-            // Handle 404 - company not found, this is expected
-            if ($e->getCode() === 404) {
-                Log::info('Company not found by name (404), will create new one', [
-                    'name' => $name,
-                ]);
-
-                return null; // Return null to indicate company should be created
-            }
-
-            // Handle other API errors
-            Log::warning('API error while searching for company by name', [
-                'name' => $name,
-                'error' => $e->getMessage(),
-                'code' => $e->getCode(),
-            ]);
-            throw $e; // Re-throw other API errors
-        } catch (\Exception $e) {
-            Log::warning('Unexpected error while searching for company by name', [
-                'name' => $name,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-
-        return null;
-    }
-
-    /**
-     * Clean company name for better matching.
-     */
-    protected function cleanCompanyName(string $name): string
-    {
-        // Convert to lowercase and trim whitespace
-        $name = strtolower(trim($name));
-
-        // Remove common punctuation and extra spaces
-        $name = preg_replace('/[^\w\s]/', '', $name);
-        $name = preg_replace('/\s+/', ' ', $name);
-
-        return trim($name);
-    }
-
-    /**
-     * Find the best matching company name from search results.
-     */
-    protected function findBestNameMatch(string $searchName, array $results): ?array
-    {
-        $searchName = strtolower($searchName);
-        $bestMatch = null;
-        $bestScore = 0;
-
-        foreach ($results as $result) {
-            // Convert object to array if needed
-            if (is_object($result)) {
-                $resultName = strtolower($result->getProperties()['name'] ?? '');
-            } else {
-                $resultName = strtolower($result['properties']['name'] ?? '');
-            }
-
-            $score = similar_text($searchName, $resultName, $percent);
-
-            if ($percent > $bestScore && $percent > 80) { // Require at least 80% similarity
-                $bestScore = $percent;
-                $bestMatch = $result;
-            }
-        }
-
-        return $bestMatch;
-    }
-
-    /**
-     * Extract company name from translatable field or string.
-     */
-    protected function extractCompanyName($name): string
-    {
-        if (is_array($name)) {
-            // Handle translatable fields - try to get the first available language
-            if (isset($name['en'])) {
-                return $name['en'];
-            }
-
-            // If no 'en' key, get the first value
-            return (string) reset($name);
-        }
-
-        return (string) $name;
     }
 
     /**
