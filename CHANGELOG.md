@@ -2,6 +2,15 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.1.3 - 2025-08-26
+
+### What's Changed
+
+* simplify implementation by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/27
+* queue by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/26
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.1.2...v1.1.3
+
 ## v1.1.2 - 2025-08-20
 
 ### What's Changed
