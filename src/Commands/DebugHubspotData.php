@@ -28,7 +28,6 @@ class DebugHubspotData extends Command
         $contactModel = $this->argument('model');
         $email = $this->option('email');
 
-        /** @phpstan-ignore-next-line */
         $query = $contactModel::query();
 
         if ($email) {

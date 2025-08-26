@@ -4,8 +4,8 @@ namespace Tapp\LaravelHubspot\Services;
 
 use HubSpot\Client\Crm\Associations\V4\ApiException as AssociationsApiException;
 use HubSpot\Client\Crm\Associations\V4\Model\AssociationSpec;
-use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Companies\ApiException as CompaniesApiException;
+use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -405,6 +405,7 @@ class HubspotContactService
                 'company_relation' => $companyData,
                 'contact_id' => $contactId,
             ]);
+
             return;
         }
 
@@ -425,6 +426,7 @@ class HubspotContactService
                     'error' => $e->getMessage(),
                 ]);
             }
+
             return;
         }
 
@@ -511,7 +513,7 @@ class HubspotContactService
         }
     }
 
-        /**
+    /**
      * Create or find a company in HubSpot.
      */
     protected function createOrFindCompany(array $companyData): ?string
@@ -533,6 +535,7 @@ class HubspotContactService
                         'company_name' => $companyName,
                         'hubspot_id' => $existingCompany['id'],
                     ]);
+
                     return $existingCompany['id'];
                 }
             } catch (CompaniesApiException $e) {
@@ -561,6 +564,7 @@ class HubspotContactService
                     'company_name' => $companyName,
                     'hubspot_id' => $existingCompany['id'],
                 ]);
+
                 return $existingCompany['id'];
             }
 
@@ -570,16 +574,16 @@ class HubspotContactService
             ];
 
             // Add additional properties if available
-            if (!empty($companyData['address'])) {
+            if (! empty($companyData['address'])) {
                 $properties['address'] = $companyData['address'];
             }
-            if (!empty($companyData['city'])) {
+            if (! empty($companyData['city'])) {
                 $properties['city'] = $companyData['city'];
             }
-            if (!empty($companyData['state'])) {
+            if (! empty($companyData['state'])) {
                 $properties['state'] = $companyData['state'];
             }
-            if (!empty($companyData['zip'])) {
+            if (! empty($companyData['zip'])) {
                 $properties['zip'] = $companyData['zip'];
             }
 
@@ -609,6 +613,7 @@ class HubspotContactService
                             'company_name' => $companyName,
                             'hubspot_id' => $existingCompany['id'],
                         ]);
+
                         return $existingCompany['id'];
                     }
                 }
@@ -621,6 +626,7 @@ class HubspotContactService
                 'company_name' => $companyData['name'] ?? 'unknown',
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -667,6 +673,7 @@ class HubspotContactService
                     'found_name' => $result['properties']['name'] ?? 'unknown',
                     'company_id' => $result['id'],
                 ]);
+
                 return $result;
             }
 
@@ -704,10 +711,11 @@ class HubspotContactService
                         'found_name' => $bestMatch['properties']['name'] ?? 'unknown',
                         'company_id' => $bestMatch['id'],
                     ]);
+
                     return $bestMatch;
                 }
             }
-                } catch (CompaniesApiException $e) {
+        } catch (CompaniesApiException $e) {
             // Handle rate limiting specifically - retry the job
             if ($e->getCode() === 429) {
                 Log::warning('Rate limit hit while searching for company, will retry', [
@@ -722,6 +730,7 @@ class HubspotContactService
                 Log::info('Company not found by name (404), will create new one', [
                     'name' => $name,
                 ]);
+
                 return null; // Return null to indicate company should be created
             }
 
@@ -743,7 +752,7 @@ class HubspotContactService
         return null;
     }
 
-            /**
+    /**
      * Clean company name for better matching.
      */
     protected function cleanCompanyName(string $name): string
@@ -767,7 +776,7 @@ class HubspotContactService
         $bestMatch = null;
         $bestScore = 0;
 
-                foreach ($results as $result) {
+        foreach ($results as $result) {
             // Convert object to array if needed
             if (is_object($result)) {
                 $resultName = strtolower($result->getProperties()['name'] ?? '');
@@ -796,6 +805,7 @@ class HubspotContactService
             if (isset($name['en'])) {
                 return $name['en'];
             }
+
             // If no 'en' key, get the first value
             return (string) reset($name);
         }
@@ -808,7 +818,7 @@ class HubspotContactService
      */
     protected function updateCompanyHubspotId(?int $modelId, ?string $hubspotId, ?string $modelClass): void
     {
-        if (!$modelId || !$modelClass || !class_exists($modelClass)) {
+        if (! $modelId || ! $modelClass || ! class_exists($modelClass)) {
             return;
         }
 

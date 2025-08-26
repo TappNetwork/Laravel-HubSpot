@@ -40,7 +40,6 @@ class SyncHubspotContacts extends Command
         $delay = (int) $this->option('delay');
         $limit = $this->option('limit');
 
-        /** @phpstan-ignore-next-line */
         $contacts = $contactModel::all();
 
         // Apply limit if specified

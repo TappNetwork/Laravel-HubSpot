@@ -2,7 +2,7 @@ parameters:
 	ignoreErrors:
 		-
 			message: "#^Call to an undefined static method Tapp\\\\LaravelHubspot\\\\Facades\\\\Hubspot\\:\\:crm\\(\\)\\.$#"
-			count: 2
+			count: 3
 			path: src/Jobs/SyncHubspotCompanyJob.php
 
 		-
@@ -27,5 +27,30 @@ parameters:
 
 		-
 			message: "#^Call to an undefined static method Tapp\\\\LaravelHubspot\\\\Facades\\\\Hubspot\\:\\:crm\\(\\)\\.$#"
-			count: 7
+			count: 11
 			path: src/Services/HubspotContactService.php
+
+		-
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 3
+			path: src/Services/HubspotContactService.php
+
+		-
+			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
+			count: 1
+			path: src/Services/HubspotContactService.php
+
+		-
+			message: "#^Call to an undefined method object\\:\\:getProperties\\(\\)\\.$#"
+			count: 1
+			path: src/Services/HubspotContactService.php
+
+		-
+			message: "#^Call to function is_object\\(\\) with non-empty-array will always evaluate to false\\.$#"
+			count: 1
+			path: src/Services/HubspotContactService.php
+
+		-
+			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
+			count: 1
+			path: src/Jobs/SyncHubspotCompanyJob.php

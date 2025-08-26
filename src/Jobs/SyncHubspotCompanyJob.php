@@ -144,7 +144,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
     {
         $properties = [];
 
-                foreach ($map as $hubspotProperty => $modelProperty) {
+        foreach ($map as $hubspotProperty => $modelProperty) {
             $value = $this->getNestedValue($this->modelData, $modelProperty);
 
             if ($value !== null) {
@@ -154,8 +154,6 @@ class SyncHubspotCompanyJob implements ShouldQueue
 
         return new CompanyObject(['properties' => $properties]);
     }
-
-
 
     /**
      * Get nested value from array using dot notation.

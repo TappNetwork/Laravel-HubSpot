@@ -14,14 +14,15 @@ class HubspotContactObserverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->observer = new HubspotContactObserver();
+        $this->observer = new HubspotContactObserver;
     }
 
     /** @test */
     public function it_includes_dynamic_properties_from_overridden_hubspot_properties_method()
     {
         // Create a test model that overrides hubspotProperties method
-        $testModel = new class extends Model {
+        $testModel = new class extends Model
+        {
             public array $hubspotMap = [
                 'email' => 'email',
                 'firstname' => 'first_name',
@@ -61,7 +62,7 @@ class HubspotContactObserverTest extends TestCase
 
         $jobData = $method->invoke($this->observer, $testModel);
 
-                // Verify that mapped properties are included
+        // Verify that mapped properties are included
         $this->assertArrayHasKey('email', $jobData);
         $this->assertArrayHasKey('first_name', $jobData);
         $this->assertArrayHasKey('last_name', $jobData);
@@ -79,8 +80,6 @@ class HubspotContactObserverTest extends TestCase
         $this->assertEquals('3', $jobData['dynamicProperties']['courses_completed']);
         $this->assertEquals('2024-01-15', $jobData['dynamicProperties']['last_course_access']);
     }
-
-
 
     protected function tearDown(): void
     {

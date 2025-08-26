@@ -33,6 +33,7 @@ This is the contents of the published config file:
 ```php
 return [
     'disabled' => env('HUBSPOT_DISABLED', false),
+    'id' => env('HUBSPOT_ID'),
     'api_key' => env('HUBSPOT_TOKEN'),
     'log_requests' => env('HUBSPOT_LOG_REQUESTS', false),
     'property_group' => env('HUBSPOT_PROPERTY_GROUP', 'app_user_profile'),
@@ -58,9 +59,9 @@ Add the trait to your user model and define any fields to the $hubspotMap proper
 ```php
 use Tapp\LaravelHubspot\Models\HubspotContact;
 
-class User extends Authenticatable 
+class User extends Authenticatable
 {
-    use HubspotContact; 
+    use HubspotContact;
 
     public array $hubspotMap = [
         'email' => 'email',

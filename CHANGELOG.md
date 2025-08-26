@@ -2,6 +2,55 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v1.1.2 - 2025-08-20
+
+### What's Changed
+
+* company sync updates by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/24
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.1.1...v1.1.2
+
+## v1.1.1 - 2025-08-20
+
+### What's Changed
+
+* Bump stefanzweifel/git-auto-commit-action from 5 to 6 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/18
+* Sync Updates: Fix hubspot_id persistence and API exception handling by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/23
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.1.0...v1.1.1
+
+## v1.1.0 - 2025-08-01
+
+### What's Changed
+
+* Bump aglipanci/laravel-pint-action from 2.5 to 2.6 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/21
+* Add hubspot id to config by @swilla in https://github.com/TappNetwork/Laravel-HubSpot/pull/22
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.0.15...v1.1.0
+
+## v1.0.15 - 2025-07-08
+
+### What's Changed
+
+* Bump dependabot/fetch-metadata from 2.3.0 to 2.4.0 by @dependabot in https://github.com/TappNetwork/Laravel-HubSpot/pull/16
+* Use HubSpot properties method instead of array for property sync. by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/19
+* Hubspot update map by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/20
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.0.14...v1.0.15
+
+## v1.0.14 - 2025-05-09
+
+### What's Changed
+
+* update readme to reflect proper hubspot namespace by @johnwesely in https://github.com/TappNetwork/Laravel-HubSpot/pull/13
+* allow different property groups for update and create by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/15
+
+### New Contributors
+
+* @johnwesely made their first contribution in https://github.com/TappNetwork/Laravel-HubSpot/pull/13
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.0.13...v1.0.14
+
 ## v1.0.13 - 2025-02-06
 
 **Full Changelog**: https://github.com/TappNetwork/Laravel-Hubspot/compare/v1.0.12...v1.0.13
