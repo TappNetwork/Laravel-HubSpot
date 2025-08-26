@@ -101,9 +101,8 @@ class SyncHubspotProperties extends Command
             // @phpstan-ignore-next-line
             $response = Hubspot::crm()->properties()->batchApi()->create($object, $data);
         } catch (ApiException $e) {
-            $this->warn('Error creating properties. '.$e->getResponseBody());
-
-            Log::error($e);
+            $this->error('Error creating properties: '.$e->getMessage());
+            throw $e;
         }
 
         $this->info("{$object} properties created");
@@ -122,8 +121,7 @@ class SyncHubspotProperties extends Command
             return Hubspot::crm()->properties()->groupsApi()->create($object, $propertyGroupCreate);
         } catch (ApiException $e) {
             $this->warn('Error creating property group. '.$e->getResponseBody());
-
-            Log::error($e);
+            // Property group might already exist, don't throw for this case
         }
     }
 }

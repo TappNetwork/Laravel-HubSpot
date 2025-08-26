@@ -12,6 +12,11 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tapp\LaravelHubspot\Commands\SyncHubspotContacts;
 use Tapp\LaravelHubspot\Commands\SyncHubspotProperties;
 
+use Tapp\LaravelHubspot\Commands\DebugHubspotData;
+use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
+use Tapp\LaravelHubspot\Observers\HubspotCompanyObserver;
+use Tapp\LaravelHubspot\Services\HubspotContactService;
+
 class LaravelHubspotServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
@@ -27,7 +32,8 @@ class LaravelHubspotServiceProvider extends PackageServiceProvider
             ->hasViews()
             ->hasMigration('add_hubspot_id_to_users_table')
             ->hasCommand(SyncHubspotProperties::class)
-            ->hasCommand(SyncHubspotContacts::class);
+            ->hasCommand(SyncHubspotContacts::class)
+            ->hasCommand(DebugHubspotData::class);
     }
 
     public function bootingPackage()
@@ -39,7 +45,7 @@ class LaravelHubspotServiceProvider extends PackageServiceProvider
 
             $stack->push(Middleware::mapRequest(function (RequestInterface $r) {
                 if (config('hubspot.log_requests')) {
-                    \Log::info('Hubspot Request: '.$r->getMethod().' '.$r->getUri());
+                    \Illuminate\Support\Facades\Log::info('Hubspot Request: '.$r->getMethod().' '.$r->getUri());
                 }
 
                 return $r;
@@ -49,5 +55,22 @@ class LaravelHubspotServiceProvider extends PackageServiceProvider
 
             return LaravelHubspot::createWithAccessToken(config('hubspot.api_key'), $client);
         });
+
+        // Register services
+        $this->app->singleton(HubspotContactService::class);
+    }
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        // Register observers for models that use HubSpot traits
+        $this->registerObservers();
+    }
+
+    protected function registerObservers(): void
+    {
+        // This will be called by the consuming application
+        // Users can register observers in their AppServiceProvider
     }
 }

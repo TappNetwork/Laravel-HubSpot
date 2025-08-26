@@ -10,6 +10,7 @@ use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
+use Tapp\LaravelHubspot\Jobs\SyncHubspotCompanyJob;
 
 trait HubspotCompany
 {
@@ -30,12 +31,6 @@ trait HubspotCompany
             $model->hubspot_id = $hubspotCompany['id'];
             static::saveHubspotId($model, $hubspotCompany['id']);
         } catch (ApiException $e) {
-            Log::error('Error creating hubspot company', [
-                'name' => $model->name,
-                'message' => $e->getMessage(),
-                'response' => $e->getResponseBody(),
-            ]);
-
             throw $e;
         }
 
@@ -48,16 +43,39 @@ trait HubspotCompany
             throw new \Exception('Hubspot ID missing. Cannot update company: '.$model->name);
         }
 
+        // Validate that the company exists in HubSpot before attempting update
+        if (!static::validateHubspotCompanyExists($model->hubspot_id)) {
+            // Try to find by name without clearing the invalid ID
+            if ($model->name) {
+                $company = static::findCompanyByName($model->name);
+                if ($company) {
+                    // Update with correct hubspot_id and retry
+                    static::saveHubspotId($model, $company['id']);
+                    $model->hubspot_id = $company['id'];
+                } else {
+                    // Company doesn't exist, create it instead
+                    return static::createHubspotCompany($model);
+                }
+            } else {
+                throw new \Exception('Invalid HubSpot ID and no name provided for company: '.$model->name);
+            }
+        }
+
         try {
             $hubspotCompany = Hubspot::crm()->companies()->basicApi()->update($model->hubspot_id, $model->hubspotPropertiesObject($model->hubspotMap));
         } catch (ApiException $e) {
-            Log::error('Hubspot company update failed', [
-                'name' => $model->name,
-                'hubspot_id' => $model->hubspot_id,
-                'message' => $e->getMessage(),
-                'response' => $e->getResponseBody(),
-            ]);
-
+            // Handle specific API errors
+            if ($e->getCode() === 400) {
+                $properties = $model->hubspotProperties($model->hubspotMap);
+                Log::error('HubSpot API 400 error - data validation failed', [
+                    'name' => $model->name,
+                    'hubspot_id' => $model->hubspot_id,
+                    'error' => $e->getMessage(),
+                    'properties_sent' => $properties,
+                    'property_map' => $model->hubspotMap,
+                ]);
+                throw new \Exception('HubSpot API validation error: ' . $e->getMessage());
+            }
             throw $e;
         }
 
@@ -65,9 +83,7 @@ trait HubspotCompany
     }
 
     /*
-     * if the model has a hubspot_id, find the company by id and update
-     * if the model has an email, find the company by email and update
-     * if the fetch requests fail, create a new company
+     * Main entry point: update existing company or create new one
      */
     public static function updateOrCreateHubspotCompany($model)
     {
@@ -75,18 +91,48 @@ trait HubspotCompany
             return;
         }
 
-        // TODO this does not support using dot notation in map
-        // if ($model->isClean($model->hubspotMap)) {
-        //     return;
-        // }
-
-        $hubspotCompany = static::getCompanyByIdOrName($model);
-
-        if (! $hubspotCompany) {
-            return static::createHubspotCompany($model);
+        // Check if queuing is enabled
+        if (config('hubspot.queue.enabled', true)) {
+            return static::dispatchHubspotCompanyJob($model);
         }
 
-        return static::updateHubspotCompany($model);
+        // Fallback to synchronous operation
+        $hubspotCompany = static::getCompanyByIdOrName($model);
+
+        if ($hubspotCompany) {
+            return static::updateHubspotCompany($model);
+        }
+
+        // Company doesn't exist, create it
+        return static::createHubspotCompany($model);
+    }
+
+    /**
+     * Dispatch a job to handle HubSpot company synchronization
+     */
+    protected static function dispatchHubspotCompanyJob($model)
+    {
+        $modelData = static::prepareModelDataForJob($model);
+
+        // Determine operation type
+        $operation = $model->hubspot_id ? 'update' : 'create';
+
+        SyncHubspotCompanyJob::dispatch($modelData, $operation, get_class($model));
+
+        return null; // Job is queued, no immediate result
+    }
+
+    /**
+     * Prepare model data for job serialization
+     */
+    protected static function prepareModelDataForJob($model): array
+    {
+        $data = $model->toArray();
+
+        // Add HubSpot-specific properties
+        $data['hubspotMap'] = $model->hubspotMap ?? [];
+
+        return $data;
     }
 
     public static function getCompanyByIdOrName($model)
@@ -97,12 +143,10 @@ trait HubspotCompany
             try {
                 return Hubspot::crm()->companies()->basicApi()->getById($model->hubspot_id);
             } catch (ApiException $e) {
-                Log::debug('Hubspot company not found with id', [
-                    'id' => $model->id,
-                    'hubspot_id' => $model->hubspot_id,
-                    'message' => $e->getMessage(),
-                    'response' => $e->getResponseBody(),
-                ]);
+                // Company not found by ID, continue to try by name
+                if ($e->getCode() !== 404) {
+                    throw $e; // Re-throw non-404 errors
+                }
             }
         }
 
@@ -132,14 +176,67 @@ trait HubspotCompany
                 static::saveHubspotId($model, $hubspotCompany['id']);
             }
         } catch (ApiException $e) {
-            Log::debug('Hubspot company not found with name', [
-                'name' => $model->name,
-                'message' => $e->getMessage(),
-                'response' => $e->getResponseBody(),
-            ]);
+            // Company not found by name either, return null
+            if ($e->getCode() !== 404) {
+                throw $e; // Re-throw non-404 errors
+            }
         }
 
         return $hubspotCompany;
+    }
+
+    /**
+     * Validate that a HubSpot company exists by ID.
+     */
+    public static function validateHubspotCompanyExists(string $hubspotId): bool
+    {
+        try {
+            Hubspot::crm()->companies()->basicApi()->getById($hubspotId);
+            return true;
+        } catch (ApiException $e) {
+            if ($e->getCode() === 404) {
+                Log::warning('HubSpot company not found by ID', [
+                    'hubspot_id' => $hubspotId,
+                    'error' => $e->getMessage(),
+                ]);
+                return false;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Find company by name.
+     */
+    protected static function findCompanyByName(string $name): ?array
+    {
+        try {
+            $filter = new Filter([
+                'value' => $name,
+                'property_name' => 'name',
+                'operator' => 'EQ',
+            ]);
+
+            $filterGroup = new FilterGroup([
+                'filters' => [$filter],
+            ]);
+
+            $companySearch = new CompanySearch([
+                'filter_groups' => [$filterGroup],
+            ]);
+
+            $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
+
+            if ($searchResults['total'] > 0) {
+                return $searchResults['results'][0];
+            }
+        } catch (ApiException $e) {
+            if ($e->getCode() !== 404) {
+                throw $e;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -213,9 +310,7 @@ trait HubspotCompany
         try {
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
         } catch (\Exception $e) {
-            // dump($filter, $properties);
-            // dd($e);
-            throw ($e);
+            throw $e;
         }
 
         $companyExists = $searchResults['total'];
