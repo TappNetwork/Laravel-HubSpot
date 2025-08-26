@@ -59,6 +59,28 @@ class SyncHubspotCompanyJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
+            // If it's a rate limit error, retry with delay
+            if (str_contains($e->getMessage(), '429') || str_contains($e->getMessage(), 'rate limit')) {
+                Log::info('Rate limit detected, releasing job for retry', [
+                    'operation' => $this->operation,
+                    'model_id' => $this->modelData['id'] ?? null,
+                ]);
+                $this->release(30); // Retry in 30 seconds
+
+                return;
+            }
+
+            // If it's a 409 conflict (duplicate), retry with shorter delay
+            if (str_contains($e->getMessage(), '409') || str_contains($e->getMessage(), 'conflict')) {
+                Log::info('Conflict detected (likely duplicate company), releasing job for retry', [
+                    'operation' => $this->operation,
+                    'model_id' => $this->modelData['id'] ?? null,
+                ]);
+                $this->release(5); // Retry in 5 seconds
+
+                return;
+            }
+
             throw $e;
         }
     }
@@ -86,7 +108,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
             $hubspotCompany = Hubspot::crm()->companies()->basicApi()->create($properties);
 
             // Update the model with HubSpot ID
-            $companyId = is_array($hubspotCompany) ? $hubspotCompany['id'] : $hubspotCompany->getId();
+            $companyId = $this->extractCompanyId($hubspotCompany);
             $this->updateModelHubspotId($companyId);
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate company name) by finding existing company
@@ -99,7 +121,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
                 $company = $this->findCompanyByName($this->modelData['name']);
                 if ($company) {
                     // Update the model with existing HubSpot ID
-                    $companyId = is_array($company) ? $company['id'] : $company->getId();
+                    $companyId = $this->extractCompanyId($company);
                     $this->updateModelHubspotId($companyId);
 
                     return;
@@ -138,6 +160,35 @@ class SyncHubspotCompanyJob implements ShouldQueue
     }
 
     /**
+     * Extract company ID safely from various response types.
+     */
+    protected function extractCompanyId($company): string
+    {
+        // If it's already an array, return the id
+        if (is_array($company)) {
+            return $company['id'];
+        }
+
+        // If it's an object with getId method, use it
+        if (is_object($company) && method_exists($company, 'getId')) {
+            return $company->getId();
+        }
+
+        // If it's an Error object, throw an exception
+        if (is_object($company) && get_class($company) === 'HubSpot\Client\Crm\Companies\Model\Error') {
+            throw new \Exception('HubSpot API returned an error: '.(method_exists($company, 'getMessage') ? $company->getMessage() : 'Unknown error'));
+        }
+
+        // Fallback: try to convert to array
+        $companyArray = (array) $company;
+        if (isset($companyArray['id'])) {
+            return $companyArray['id'];
+        }
+
+        throw new \Exception('Unable to extract company ID from response');
+    }
+
+    /**
      * Build HubSpot properties object from model data.
      */
     protected function buildPropertiesObject(array $map): CompanyObject
@@ -148,11 +199,93 @@ class SyncHubspotCompanyJob implements ShouldQueue
             $value = $this->getNestedValue($this->modelData, $modelProperty);
 
             if ($value !== null) {
-                $properties[$hubspotProperty] = $value;
+                $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                if ($convertedValue !== null) {
+                    $properties[$hubspotProperty] = $convertedValue;
+                }
             }
         }
 
+        // Validate all properties are strings before creating the object
+        $this->validateHubspotProperties($properties);
+
         return new CompanyObject(['properties' => $properties]);
+    }
+
+    /**
+     * Validate that all properties are properly converted to strings for HubSpot API
+     */
+    protected function validateHubspotProperties(array $properties): void
+    {
+        $invalidProperties = [];
+
+        foreach ($properties as $key => $value) {
+            if (! is_string($value)) {
+                $invalidProperties[$key] = [
+                    'value' => $value,
+                    'type' => gettype($value),
+                    'class' => is_object($value) ? get_class($value) : null,
+                ];
+            }
+        }
+
+        if (! empty($invalidProperties)) {
+            throw new \InvalidArgumentException(
+                'HubSpot properties must be strings after automatic conversion. Invalid properties found: '.
+                json_encode($invalidProperties, JSON_PRETTY_PRINT).
+                '. This indicates a data type that could not be automatically converted. Please ensure all properties are convertible to strings.'
+            );
+        }
+    }
+
+
+
+    /**
+     * Convert a value to a string suitable for HubSpot API
+     */
+    protected function convertValueForHubspot($value, string $propertyName)
+    {
+        if (is_null($value)) {
+            return null;
+        } elseif ($value instanceof \Carbon\Carbon) {
+            return $value->toISOString();
+        } elseif (is_array($value)) {
+            if (empty($value)) {
+                return null;
+            }
+
+            // Handle translatable fields (associative arrays with language keys)
+            if (array_keys($value) !== range(0, count($value) - 1)) {
+                // This is an associative array, likely a translatable field
+                if (isset($value['en'])) {
+                    return $value['en'];
+                }
+                // If no 'en' key, get the first value
+                return (string) reset($value);
+            }
+
+            // Handle regular indexed arrays
+            return implode(', ', array_filter($value, 'is_scalar'));
+        } elseif (is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                return (string) $value;
+            } elseif (method_exists($value, 'toArray')) {
+                $arrayValue = $value->toArray();
+
+                return is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
+            } else {
+                throw new \InvalidArgumentException(
+                    'Cannot convert object of type '.get_class($value)." to string for property: {$propertyName}. ".
+                    'Objects must implement __toString() or toArray() methods to be automatically converted.'
+                );
+            }
+        } elseif (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        } elseif (is_numeric($value)) {
+            return (string) $value;
+        } else {
+            return (string) $value;
+        }
     }
 
     /**
@@ -160,17 +293,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
      */
     protected function getNestedValue(array $array, string $key)
     {
-        $keys = explode('.', $key);
-        $value = $array;
-
-        foreach ($keys as $k) {
-            if (! isset($value[$k])) {
-                return null;
-            }
-            $value = $value[$k];
-        }
-
-        return $value;
+        return data_get($array, $key);
     }
 
     /**
