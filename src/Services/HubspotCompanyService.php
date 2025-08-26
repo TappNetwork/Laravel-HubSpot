@@ -22,6 +22,14 @@ class HubspotCompanyService
             // Extract company name - handle translatable fields
             $companyName = $this->extractCompanyName($companyData['name'] ?? '');
 
+            // Validate that we have a valid company name
+            if (empty(trim($companyName))) {
+                Log::warning('Cannot create company with empty name', [
+                    'company_data' => $companyData,
+                ]);
+                return null;
+            }
+
             Log::info('Looking for existing company', [
                 'company_name' => $companyName,
                 'company_data' => $companyData,
@@ -364,12 +372,19 @@ class HubspotCompanyService
     {
         if (is_array($name)) {
             // Handle translatable fields - try to get the first available language
-            if (isset($name['en'])) {
+            if (isset($name['en']) && !empty($name['en'])) {
                 return $name['en'];
             }
 
-            // If no 'en' key, get the first value
-            return (string) reset($name);
+            // If no 'en' key, get the first non-empty value
+            foreach ($name as $value) {
+                if (!empty($value)) {
+                    return (string) $value;
+                }
+            }
+
+            // If all values are empty, return empty string
+            return '';
         }
 
         return (string) $name;

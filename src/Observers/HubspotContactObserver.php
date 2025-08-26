@@ -138,6 +138,7 @@ class HubspotContactObserver
                 $data['hubspotCompanyRelation'] = [
                     'id' => $company->getKey(),
                     'hubspot_id' => $company instanceof HubspotModelInterface ? $company->getHubspotId() : ($company->hubspot_id ?? null),
+                    'name' => $company->name ?? $company->getAttribute('name'),
                 ];
             }
         }

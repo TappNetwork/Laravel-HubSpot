@@ -505,6 +505,12 @@ class HubspotContactService
 
                     // Update the company model with the new hubspot_id
                     $this->updateCompanyHubspotId($companyData['id'] ?? null, $companyId, $data['modelClass'] ?? null);
+                } else {
+                    Log::warning('Could not create or find company for contact association', [
+                        'company_name' => $companyData['name'] ?? 'unknown',
+                        'contact_id' => $contactId,
+                        'company_data' => $companyData,
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::error('Failed to create/sync company for contact association', [

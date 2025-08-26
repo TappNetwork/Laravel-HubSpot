@@ -93,7 +93,12 @@ trait HubspotContact
         if (! empty($model->hubspotCompanyRelation)) {
             $company = $model->getRelationValue($model->hubspotCompanyRelation);
             if ($company) {
-                $data['hubspotCompanyRelation'] = $company->toArray();
+                $companyData = $company->toArray();
+                // Ensure we have the name field for company lookup
+                if (!isset($companyData['name']) && method_exists($company, 'getNameAttribute')) {
+                    $companyData['name'] = $company->getNameAttribute();
+                }
+                $data['hubspotCompanyRelation'] = $companyData;
             }
         }
 
