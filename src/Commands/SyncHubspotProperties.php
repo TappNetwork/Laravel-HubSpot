@@ -58,7 +58,6 @@ class SyncHubspotProperties extends Command
 
     public function syncProperties($object, $model, $group)
     {
-        // @phpstan-ignore-next-line
         $response = Hubspot::crm()->properties()->coreApi()->getAll($object, false);
 
         $hubspotProperties = collect($response->getResults())->pluck('name');
@@ -98,7 +97,6 @@ class SyncHubspotProperties extends Command
         ]);
 
         try {
-            // @phpstan-ignore-next-line
             $response = Hubspot::crm()->properties()->batchApi()->create($object, $data);
         } catch (ApiException $e) {
             $this->error('Error creating properties: '.$e->getMessage());
@@ -117,7 +115,6 @@ class SyncHubspotProperties extends Command
         ]);
 
         try {
-            // @phpstan-ignore-next-line
             return Hubspot::crm()->properties()->groupsApi()->create($object, $propertyGroupCreate);
         } catch (ApiException $e) {
             $this->warn('Error creating property group. '.$e->getResponseBody());

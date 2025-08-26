@@ -124,7 +124,7 @@ class HubspotContactService
                 $contact = $this->findContact(['email' => $data['email']]);
                 if ($contact) {
                     // Update with correct hubspot_id and retry
-                    $contactId = is_array($contact) ? $contact['id'] : $contact->getId();
+                    $contactId = $contact['id'];
                     $this->updateModelHubspotId($data['id'] ?? null, $contactId, $data['modelClass'] ?? null);
                     $data['hubspot_id'] = $contactId;
                 } else {
@@ -281,7 +281,7 @@ class HubspotContactService
         if (is_object($contact) && method_exists($contact, 'getId')) {
             return [
                 'id' => $contact->getId(),
-                'properties' => $contact->getProperties() ?? [],
+                'properties' => method_exists($contact, 'getProperties') ? ($contact->getProperties() ?? []) : [],
             ];
         }
 
