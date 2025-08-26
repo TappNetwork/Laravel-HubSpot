@@ -1,11 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Call to an undefined static method Tapp\\\\LaravelHubspot\\\\Facades\\\\Hubspot\\:\\:crm\\(\\)\\.$#"
-			count: 3
-			path: src/Jobs/SyncHubspotCompanyJob.php
-
-		-
 			message: "#^Access to an undefined property Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$hubspotMap\\.$#"
 			count: 2
 			path: src/Observers/HubspotCompanyObserver.php
@@ -24,21 +19,6 @@ parameters:
 			message: "#^Access to an undefined property Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$id\\.$#"
 			count: 1
 			path: src/Observers/HubspotContactObserver.php
-
-		-
-			message: "#^Call to an undefined static method Tapp\\\\LaravelHubspot\\\\Facades\\\\Hubspot\\:\\:crm\\(\\)\\.$#"
-			count: 11
-			path: src/Services/HubspotContactService.php
-
-		-
-			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
-			count: 3
-			path: src/Services/HubspotContactService.php
-
-		-
-			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
-			count: 1
-			path: src/Services/HubspotContactService.php
 
 		-
 			message: "#^Call to an undefined method object\\:\\:getProperties\\(\\)\\.$#"
@@ -46,11 +26,11 @@ parameters:
 			path: src/Services/HubspotContactService.php
 
 		-
-			message: "#^Call to function is_object\\(\\) with non-empty-array will always evaluate to false\\.$#"
+			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
 			count: 1
 			path: src/Services/HubspotContactService.php
 
 		-
-			message: "#^Else branch is unreachable because ternary operator condition is always true\\.$#"
-			count: 1
-			path: src/Jobs/SyncHubspotCompanyJob.php
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 3
+			path: src/Services/HubspotContactService.php
