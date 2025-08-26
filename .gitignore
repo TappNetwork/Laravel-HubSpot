@@ -23,6 +23,7 @@ scripts/*.log
 
 # Build and Documentation
 build
+docs
 
 # Dependencies
 vendor
