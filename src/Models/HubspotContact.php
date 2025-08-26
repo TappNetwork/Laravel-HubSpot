@@ -95,7 +95,7 @@ trait HubspotContact
             if ($company) {
                 $companyData = $company->toArray();
                 // Ensure we have the name field for company lookup
-                if (!isset($companyData['name']) && method_exists($company, 'getNameAttribute')) {
+                if (! isset($companyData['name']) && method_exists($company, 'getNameAttribute')) {
                     $companyData['name'] = $company->getNameAttribute();
                 }
                 $data['hubspotCompanyRelation'] = $companyData;

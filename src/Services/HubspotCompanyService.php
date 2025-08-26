@@ -27,6 +27,7 @@ class HubspotCompanyService
                 Log::warning('Cannot create company with empty name', [
                     'company_data' => $companyData,
                 ]);
+
                 return null;
             }
 
@@ -372,13 +373,13 @@ class HubspotCompanyService
     {
         if (is_array($name)) {
             // Handle translatable fields - try to get the first available language
-            if (isset($name['en']) && !empty($name['en'])) {
+            if (isset($name['en']) && ! empty($name['en'])) {
                 return $name['en'];
             }
 
             // If no 'en' key, get the first non-empty value
             foreach ($name as $value) {
-                if (!empty($value)) {
+                if (! empty($value)) {
                     return (string) $value;
                 }
             }
