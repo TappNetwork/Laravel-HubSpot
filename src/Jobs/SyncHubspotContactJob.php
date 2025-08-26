@@ -63,6 +63,7 @@ class SyncHubspotContactJob implements ShouldQueue
                     'model_id' => $this->modelData['id'] ?? null,
                 ]);
                 $this->release(30); // Retry in 30 seconds
+
                 return;
             }
 
@@ -73,6 +74,7 @@ class SyncHubspotContactJob implements ShouldQueue
                     'model_id' => $this->modelData['id'] ?? null,
                 ]);
                 $this->release(5); // Retry in 5 seconds
+
                 return;
             }
 

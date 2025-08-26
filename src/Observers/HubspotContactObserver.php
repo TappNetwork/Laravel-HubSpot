@@ -110,7 +110,7 @@ class HubspotContactObserver
 
             foreach ($dynamicProperties as $hubspotField => $value) {
                 // Only add if not already included as a mapped field
-                if (!in_array($hubspotField, array_values($model->hubspotMap))) {
+                if (! in_array($hubspotField, array_values($model->hubspotMap))) {
                     $data['dynamicProperties'][$hubspotField] = $value;
                 }
             }
