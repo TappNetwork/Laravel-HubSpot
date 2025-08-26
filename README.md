@@ -70,6 +70,38 @@ class User extends Authenticatable
     ];
 ```
 
+### Dynamic Properties
+You can override the `hubspotProperties` method to add dynamic properties that are calculated at runtime. This is useful for properties that depend on relationships or computed values:
+
+```php
+public function hubspotProperties(array $map): array
+{
+    $properties = [];
+
+    foreach ($map as $key => $value) {
+        if (strpos($value, '.')) {
+            $properties[$key] = data_get($this, $value);
+        } else {
+            $properties[$key] = $this->$value;
+        }
+    }
+
+    // Add dynamic course progress properties
+    if (method_exists($this, 'courses')) {
+        foreach (Course::all() as $course) {
+            $extid = $course->external_id;
+            $properties[$extid.'_progress'] = round($course->getCompletionPercentageForUser($this->id));
+            $properties[$extid.'_started_at'] = $course->startedByUserAt($this->id);
+            $properties[$extid.'_completed_at'] = $course->completedByUserAt($this->id);
+        }
+    }
+
+    return $properties;
+}
+```
+
+The dynamic properties will be automatically included when syncing to HubSpot, whether using the trait's model events or the observer pattern.
+
 ### Register Observers (Recommended)
 For better separation of concerns, register the HubSpot observers in your `AppServiceProvider`:
 

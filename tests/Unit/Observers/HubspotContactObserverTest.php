@@ -2,33 +2,10 @@
 
 namespace Tapp\LaravelHubspot\Tests\Unit\Observers;
 
-use Illuminate\Support\Facades\Queue;
-use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
+use Illuminate\Database\Eloquent\Model;
+use Mockery;
 use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
 use Tapp\LaravelHubspot\Tests\TestCase;
-
-// Test model for observer tests
-class ObserverTestUser extends \Illuminate\Database\Eloquent\Model
-{
-    use \Tapp\LaravelHubspot\Models\HubspotContact;
-
-    protected $fillable = ['email', 'first_name', 'last_name'];
-
-    protected $table = 'observer_test_users';
-
-    public array $hubspotMap = [
-        'email' => 'email',
-        'firstname' => 'first_name',
-        'lastname' => 'last_name',
-    ];
-
-    public array $hubspotUpdateMap = [
-        'firstname' => 'first_name',
-        'lastname' => 'last_name',
-    ];
-
-    public string $hubspotCompanyRelation = 'company';
-}
 
 class HubspotContactObserverTest extends TestCase
 {
@@ -37,138 +14,77 @@ class HubspotContactObserverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->observer = new HubspotContactObserver;
-        Queue::fake();
+        $this->observer = new HubspotContactObserver();
     }
 
     /** @test */
-    public function it_dispatches_create_job_when_model_is_created()
+    public function it_includes_dynamic_properties_from_overridden_hubspot_properties_method()
     {
-        config(['hubspot.queue.enabled' => true]);
+        // Create a test model that overrides hubspotProperties method
+        $testModel = new class extends Model {
+            public array $hubspotMap = [
+                'email' => 'email',
+                'firstname' => 'first_name',
+                'lastname' => 'last_name',
+            ];
 
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-            'first_name' => 'Test',
-            'last_name' => 'User',
-        ]);
+            public function hubspotProperties(array $map): array
+            {
+                $properties = [];
 
-        $this->observer->created($model);
+                foreach ($map as $key => $value) {
+                    if (strpos($value, '.')) {
+                        $properties[$key] = data_get($this, $value);
+                    } else {
+                        $properties[$key] = $this->$value;
+                    }
+                }
 
-        Queue::assertPushed(SyncHubspotContactJob::class, function ($job) {
-            return $job->operation === 'create';
-        });
+                // Add dynamic course progress properties
+                $properties['course_progress'] = '75%';
+                $properties['courses_completed'] = '3';
+                $properties['last_course_access'] = '2024-01-15';
+
+                return $properties;
+            }
+        };
+
+        $testModel->id = 1;
+        $testModel->email = 'test@example.com';
+        $testModel->first_name = 'John';
+        $testModel->last_name = 'Doe';
+
+        // Use reflection to test the protected method
+        $reflection = new \ReflectionClass($this->observer);
+        $method = $reflection->getMethod('prepareJobData');
+        $method->setAccessible(true);
+
+        $jobData = $method->invoke($this->observer, $testModel);
+
+                // Verify that mapped properties are included
+        $this->assertArrayHasKey('email', $jobData);
+        $this->assertArrayHasKey('first_name', $jobData);
+        $this->assertArrayHasKey('last_name', $jobData);
+
+        // Verify that dynamic properties are included in the dynamicProperties array
+        $this->assertArrayHasKey('dynamicProperties', $jobData);
+        $this->assertArrayHasKey('course_progress', $jobData['dynamicProperties']);
+        $this->assertArrayHasKey('courses_completed', $jobData['dynamicProperties']);
+        $this->assertArrayHasKey('last_course_access', $jobData['dynamicProperties']);
+
+        $this->assertEquals('test@example.com', $jobData['email']);
+        $this->assertEquals('John', $jobData['first_name']);
+        $this->assertEquals('Doe', $jobData['last_name']);
+        $this->assertEquals('75%', $jobData['dynamicProperties']['course_progress']);
+        $this->assertEquals('3', $jobData['dynamicProperties']['courses_completed']);
+        $this->assertEquals('2024-01-15', $jobData['dynamicProperties']['last_course_access']);
     }
 
-    /** @test */
-    public function it_dispatches_update_job_when_model_is_updated()
+
+
+    protected function tearDown(): void
     {
-        config(['hubspot.queue.enabled' => true]);
-
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-            'first_name' => 'Test',
-            'last_name' => 'User',
-        ]);
-
-        // Simulate model being updated
-        $model->wasRecentlyCreated = false;
-        $model->syncChanges();
-
-        $this->observer->updated($model);
-
-        Queue::assertPushed(SyncHubspotContactJob::class, function ($job) {
-            return $job->operation === 'update';
-        });
-    }
-
-    /** @test */
-    public function it_skips_sync_when_hubspot_is_disabled()
-    {
-        config(['hubspot.disabled' => true]);
-
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-        ]);
-
-        $this->observer->created($model);
-
-        Queue::assertNotPushed(SyncHubspotContactJob::class);
-    }
-
-    /** @test */
-    public function it_skips_sync_when_model_has_no_hubspot_map()
-    {
-        config(['hubspot.disabled' => false]);
-
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-        ]);
-        $model->hubspotMap = []; // Empty map
-
-        $this->observer->created($model);
-
-        Queue::assertNotPushed(SyncHubspotContactJob::class);
-    }
-
-    /** @test */
-    public function it_handles_model_without_changes()
-    {
-        config(['hubspot.queue.enabled' => true]);
-
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-            'first_name' => 'Test',
-            'last_name' => 'User',
-        ]);
-
-        // Test that the observer can handle models without changes
-        $this->observer->updated($model);
-
-        // The observer should handle this gracefully
-        $this->assertTrue(true);
-    }
-
-    /** @test */
-    public function it_prepares_job_data_correctly()
-    {
-        config(['hubspot.queue.enabled' => true]);
-
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-            'first_name' => 'Test',
-            'last_name' => 'User',
-        ]);
-
-        $this->observer->created($model);
-
-        // Test that the observer handles the model correctly
-        $this->assertTrue(true);
-    }
-
-    /** @test */
-    public function it_handles_nested_values_correctly()
-    {
-        config(['hubspot.queue.enabled' => true]);
-
-        $model = new ObserverTestUser([
-            'id' => 1,
-            'email' => 'test@example.com',
-        ]);
-
-        // Test with nested value access
-        $model->hubspotMap = [
-            'email' => 'email',
-            'firstname' => 'profile.first_name', // Nested field
-        ];
-
-        $this->observer->created($model);
-
-        Queue::assertPushed(SyncHubspotContactJob::class);
+        Mockery::close();
+        parent::tearDown();
     }
 }

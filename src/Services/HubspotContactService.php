@@ -330,6 +330,7 @@ class HubspotContactService
     {
         $properties = [];
 
+        // Process mapped properties
         foreach ($map as $hubspotProperty => $modelProperty) {
             $value = $this->getNestedValue($data, $modelProperty);
 
@@ -337,6 +338,24 @@ class HubspotContactService
                 $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
+                }
+            }
+        }
+
+        // Process dynamic properties that are explicitly added by hubspotProperties method
+        if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
+            foreach ($data['dynamicProperties'] as $hubspotProperty => $value) {
+                // Skip if this property is already processed as a mapped property
+                if (array_key_exists($hubspotProperty, $map)) {
+                    continue;
+                }
+
+                // Convert and add dynamic property
+                if ($value !== null) {
+                    $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                    if ($convertedValue !== null) {
+                        $properties[$hubspotProperty] = $convertedValue;
+                    }
                 }
             }
         }

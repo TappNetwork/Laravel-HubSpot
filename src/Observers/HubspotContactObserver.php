@@ -98,9 +98,22 @@ class HubspotContactObserver
             'hubspotCompanyRelation' => $model->hubspotCompanyRelation ?? '',
         ];
 
-        // Only include HubSpot-mapped fields
+        // Include HubSpot-mapped fields
         foreach ($model->hubspotMap as $hubspotField => $modelField) {
             $data[$modelField] = $this->getNestedValue($model, $modelField);
+        }
+
+        // Include dynamic properties from overridden hubspotProperties method
+        if (method_exists($model, 'hubspotProperties')) {
+            $dynamicProperties = $model->hubspotProperties($model->hubspotMap);
+            $data['dynamicProperties'] = [];
+
+            foreach ($dynamicProperties as $hubspotField => $value) {
+                // Only add if not already included as a mapped field
+                if (!in_array($hubspotField, array_values($model->hubspotMap))) {
+                    $data['dynamicProperties'][$hubspotField] = $value;
+                }
+            }
         }
 
         // Include company relation data if it exists

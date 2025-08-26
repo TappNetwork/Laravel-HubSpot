@@ -76,6 +76,19 @@ trait HubspotContact
         $data['hubspotUpdateMap'] = $model->hubspotUpdateMap ?? [];
         $data['hubspotCompanyRelation'] = $model->hubspotCompanyRelation ?? '';
 
+        // Add dynamic properties from overridden hubspotProperties method
+        if (method_exists($model, 'hubspotProperties')) {
+            $dynamicProperties = $model->hubspotProperties($model->hubspotMap);
+            $data['dynamicProperties'] = [];
+
+            foreach ($dynamicProperties as $hubspotField => $value) {
+                // Only add if not already included as a mapped field
+                if (!in_array($hubspotField, array_values($model->hubspotMap))) {
+                    $data['dynamicProperties'][$hubspotField] = $value;
+                }
+            }
+        }
+
         // Add company relation data if it exists
         if (! empty($model->hubspotCompanyRelation)) {
             $company = $model->getRelationValue($model->hubspotCompanyRelation);

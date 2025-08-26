@@ -48,6 +48,47 @@ class HubspotContactServiceTest extends TestCase
     }
 
     /** @test */
+    public function it_handles_dynamic_properties_in_data_array()
+    {
+        $data = [
+            'email' => 'test@example.com',
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            // Dynamic properties in separate array
+            'dynamicProperties' => [
+                'course_progress' => '75%',
+                'courses_completed' => '3',
+                'last_course_access' => '2024-01-15',
+            ],
+        ];
+
+        $map = [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ];
+
+        // Use reflection to test protected method
+        $reflection = new \ReflectionClass($this->service);
+        $method = $reflection->getMethod('buildPropertiesObject');
+        $method->setAccessible(true);
+
+        $properties = $method->invoke($this->service, $map, $data);
+
+        $this->assertInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class, $properties);
+
+        // Check mapped properties
+        $this->assertEquals('test@example.com', $properties->getProperties()['email']);
+        $this->assertEquals('John', $properties->getProperties()['firstname']);
+        $this->assertEquals('Doe', $properties->getProperties()['lastname']);
+
+        // Check dynamic properties
+        $this->assertEquals('75%', $properties->getProperties()['course_progress']);
+        $this->assertEquals('3', $properties->getProperties()['courses_completed']);
+        $this->assertEquals('2024-01-15', $properties->getProperties()['last_course_access']);
+    }
+
+    /** @test */
     public function it_creates_contact_successfully()
     {
         // Mock the HubSpot API response
@@ -254,4 +295,3 @@ class UnitTestUser extends \Illuminate\Database\Eloquent\Model
 {
     protected $fillable = ['email', 'first_name', 'last_name'];
 }
-f
