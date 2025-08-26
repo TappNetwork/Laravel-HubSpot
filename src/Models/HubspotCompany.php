@@ -127,7 +127,7 @@ trait HubspotCompany
      */
     protected static function prepareModelDataForJob($model): array
     {
-        $data = $model->toArray();
+        $data = $model->attributesToArray();
 
         // Add HubSpot-specific properties
         $data['hubspotMap'] = $model->hubspotMap ?? [];
@@ -170,6 +170,14 @@ trait HubspotCompany
 
             if ($searchResults['total'] > 0) {
                 $hubspotCompany = $searchResults['results'][0];
+
+                // Convert object to array if needed
+                if (is_object($hubspotCompany)) {
+                    $hubspotCompany = [
+                        'id' => $hubspotCompany->getId(),
+                        'properties' => $hubspotCompany->getProperties() ?? [],
+                    ];
+                }
 
                 // Update the hubspot_id and save it to prevent future 404s
                 $model->hubspot_id = $hubspotCompany['id'];
@@ -230,7 +238,17 @@ trait HubspotCompany
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
 
             if ($searchResults['total'] > 0) {
-                return $searchResults['results'][0];
+                $result = $searchResults['results'][0];
+
+                // Convert object to array if needed
+                if (is_object($result)) {
+                    $result = [
+                        'id' => $result->getId(),
+                        'properties' => $result->getProperties() ?? [],
+                    ];
+                }
+
+                return $result;
             }
         } catch (ApiException $e) {
             if ($e->getCode() !== 404) {

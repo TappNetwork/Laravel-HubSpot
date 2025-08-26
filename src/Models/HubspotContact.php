@@ -232,7 +232,17 @@ trait HubspotContact
     protected static function findContactByEmail(string $email): ?array
     {
         try {
-            return Hubspot::crm()->contacts()->basicApi()->getById($email, null, null, null, false, 'email');
+            $contact = Hubspot::crm()->contacts()->basicApi()->getById($email, null, null, null, false, 'email');
+
+            // Convert object to array if needed
+            if (is_object($contact)) {
+                $contact = [
+                    'id' => $contact->getId(),
+                    'properties' => $contact->getProperties() ?? [],
+                ];
+            }
+
+            return $contact;
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
                 return null;

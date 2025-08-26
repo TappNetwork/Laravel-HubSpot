@@ -254,3 +254,4 @@ class UnitTestUser extends \Illuminate\Database\Eloquent\Model
 {
     protected $fillable = ['email', 'first_name', 'last_name'];
 }
+f

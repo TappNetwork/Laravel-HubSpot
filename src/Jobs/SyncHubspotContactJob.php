@@ -56,6 +56,26 @@ class SyncHubspotContactJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
+            // If it's a rate limit error, retry with delay
+            if (str_contains($e->getMessage(), '429') || str_contains($e->getMessage(), 'rate limit')) {
+                Log::info('Rate limit detected, releasing job for retry', [
+                    'operation' => $this->operation,
+                    'model_id' => $this->modelData['id'] ?? null,
+                ]);
+                $this->release(30); // Retry in 30 seconds
+                return;
+            }
+
+            // If it's a 409 conflict (duplicate), retry with shorter delay
+            if (str_contains($e->getMessage(), '409') || str_contains($e->getMessage(), 'conflict')) {
+                Log::info('Conflict detected (likely duplicate company), releasing job for retry', [
+                    'operation' => $this->operation,
+                    'model_id' => $this->modelData['id'] ?? null,
+                ]);
+                $this->release(5); // Retry in 5 seconds
+                return;
+            }
+
             throw $e;
         }
     }

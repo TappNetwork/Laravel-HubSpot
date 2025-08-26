@@ -144,7 +144,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
     {
         $properties = [];
 
-        foreach ($map as $hubspotProperty => $modelProperty) {
+                foreach ($map as $hubspotProperty => $modelProperty) {
             $value = $this->getNestedValue($this->modelData, $modelProperty);
 
             if ($value !== null) {
@@ -154,6 +154,8 @@ class SyncHubspotCompanyJob implements ShouldQueue
 
         return new CompanyObject(['properties' => $properties]);
     }
+
+
 
     /**
      * Get nested value from array using dot notation.
@@ -211,7 +213,17 @@ class SyncHubspotCompanyJob implements ShouldQueue
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
 
             if ($searchResults['total'] > 0) {
-                return $searchResults['results'][0];
+                $result = $searchResults['results'][0];
+
+                // Convert object to array if needed
+                if (is_object($result)) {
+                    $result = [
+                        'id' => $result->getId(),
+                        'properties' => $result->getProperties() ?? [],
+                    ];
+                }
+
+                return $result;
             }
         } catch (ApiException $e) {
             if ($e->getCode() !== 404) {
