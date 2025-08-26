@@ -7,94 +7,29 @@ use HubSpot\Client\Crm\Companies\Model\Filter;
 use HubSpot\Client\Crm\Companies\Model\FilterGroup;
 use HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest as CompanySearch;
 use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyObject;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 
-class SyncHubspotCompanyJob implements ShouldQueue
+class SyncHubspotCompanyJob extends BaseHubspotJob
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public $tries;
-
-    public $backoff;
-
     /**
-     * Create a new job instance.
+     * Execute the specific operation (create or update).
      */
-    public function __construct(
-        public array $modelData,
-        public string $operation = 'update',
-        public ?string $modelClass = null
-    ) {
-        $this->tries = config('hubspot.queue.retry_attempts', 3);
-        $this->backoff = config('hubspot.queue.retry_delay', 60);
-        $this->onQueue(config('hubspot.queue.queue', 'hubspot'));
-        $this->onConnection(config('hubspot.queue.connection', 'default'));
-    }
-
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
+    protected function executeOperation(): void
     {
-        if (config('hubspot.disabled')) {
-            return;
-        }
-
-        try {
-            if ($this->operation === 'create') {
-                $this->createCompany();
-            } else {
-                $this->updateCompany();
-            }
-        } catch (\Exception $e) {
-            Log::error('HubSpot company sync job failed', [
-                'operation' => $this->operation,
-                'model_data' => $this->modelData,
-                'error' => $e->getMessage(),
-            ]);
-
-            // If it's a rate limit error, retry with delay
-            if (str_contains($e->getMessage(), '429') || str_contains($e->getMessage(), 'rate limit')) {
-                Log::info('Rate limit detected, releasing job for retry', [
-                    'operation' => $this->operation,
-                    'model_id' => $this->modelData['id'] ?? null,
-                ]);
-                $this->release(30); // Retry in 30 seconds
-
-                return;
-            }
-
-            // If it's a 409 conflict (duplicate), retry with shorter delay
-            if (str_contains($e->getMessage(), '409') || str_contains($e->getMessage(), 'conflict')) {
-                Log::info('Conflict detected (likely duplicate company), releasing job for retry', [
-                    'operation' => $this->operation,
-                    'model_id' => $this->modelData['id'] ?? null,
-                ]);
-                $this->release(5); // Retry in 5 seconds
-
-                return;
-            }
-
-            throw $e;
+        if ($this->operation === 'create') {
+            $this->createCompany();
+        } else {
+            $this->updateCompany();
         }
     }
 
     /**
-     * Handle a job failure.
+     * Get the job type for logging.
      */
-    public function failed(\Throwable $exception): void
+    protected function getJobType(): string
     {
-        Log::error('HubSpot company sync job failed permanently', [
-            'operation' => $this->operation,
-            'model_data' => $this->modelData,
-            'error' => $exception->getMessage(),
-        ]);
+        return 'HubSpot company';
     }
 
     /**
@@ -106,6 +41,11 @@ class SyncHubspotCompanyJob implements ShouldQueue
 
         try {
             $hubspotCompany = Hubspot::crm()->companies()->basicApi()->create($properties);
+
+            // Check if response is an Error object
+            if ($hubspotCompany instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+                throw new \Exception('HubSpot API returned an error: '.$hubspotCompany->getMessage());
+            }
 
             // Update the model with HubSpot ID
             $companyId = $this->extractCompanyId($hubspotCompany);
@@ -157,6 +97,11 @@ class SyncHubspotCompanyJob implements ShouldQueue
             $this->modelData['hubspot_id'],
             $properties
         );
+
+        // Check if response is an Error object
+        if ($hubspotCompany instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+            throw new \Exception('HubSpot API returned an error: '.$hubspotCompany->getMessage());
+        }
     }
 
     /**
@@ -164,28 +109,12 @@ class SyncHubspotCompanyJob implements ShouldQueue
      */
     protected function extractCompanyId($company): string
     {
-        // If it's already an array, return the id
-        if (is_array($company)) {
-            return $company['id'];
-        }
-
-        // If it's an object with getId method, use it
-        if (is_object($company) && method_exists($company, 'getId')) {
-            return $company->getId();
-        }
-
         // If it's an Error object, throw an exception
         if (is_object($company) && get_class($company) === 'HubSpot\Client\Crm\Companies\Model\Error') {
             throw new \Exception('HubSpot API returned an error: '.(method_exists($company, 'getMessage') ? $company->getMessage() : 'Unknown error'));
         }
 
-        // Fallback: try to convert to array
-        $companyArray = (array) $company;
-        if (isset($companyArray['id'])) {
-            return $companyArray['id'];
-        }
-
-        throw new \Exception('Unable to extract company ID from response');
+        return $this->extractId($company);
     }
 
     /**
@@ -210,104 +139,6 @@ class SyncHubspotCompanyJob implements ShouldQueue
         $this->validateHubspotProperties($properties);
 
         return new CompanyObject(['properties' => $properties]);
-    }
-
-    /**
-     * Validate that all properties are properly converted to strings for HubSpot API
-     */
-    protected function validateHubspotProperties(array $properties): void
-    {
-        $invalidProperties = [];
-
-        foreach ($properties as $key => $value) {
-            if (! is_string($value)) {
-                $invalidProperties[$key] = [
-                    'value' => $value,
-                    'type' => gettype($value),
-                    'class' => is_object($value) ? get_class($value) : null,
-                ];
-            }
-        }
-
-        if (! empty($invalidProperties)) {
-            throw new \InvalidArgumentException(
-                'HubSpot properties must be strings after automatic conversion. Invalid properties found: '.
-                json_encode($invalidProperties, JSON_PRETTY_PRINT).
-                '. This indicates a data type that could not be automatically converted. Please ensure all properties are convertible to strings.'
-            );
-        }
-    }
-
-    /**
-     * Convert a value to a string suitable for HubSpot API
-     */
-    protected function convertValueForHubspot($value, string $propertyName)
-    {
-        if (is_null($value)) {
-            return null;
-        } elseif ($value instanceof \Carbon\Carbon) {
-            return $value->toISOString();
-        } elseif (is_array($value)) {
-            if (empty($value)) {
-                return null;
-            }
-
-            // Handle translatable fields (associative arrays with language keys)
-            if (array_keys($value) !== range(0, count($value) - 1)) {
-                // This is an associative array, likely a translatable field
-                if (isset($value['en'])) {
-                    return $value['en'];
-                }
-
-                // If no 'en' key, get the first value
-                return (string) reset($value);
-            }
-
-            // Handle regular indexed arrays
-            return implode(', ', array_filter($value, 'is_scalar'));
-        } elseif (is_object($value)) {
-            if (method_exists($value, '__toString')) {
-                return (string) $value;
-            } elseif (method_exists($value, 'toArray')) {
-                $arrayValue = $value->toArray();
-
-                return is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
-            } else {
-                throw new \InvalidArgumentException(
-                    'Cannot convert object of type '.get_class($value)." to string for property: {$propertyName}. ".
-                    'Objects must implement __toString() or toArray() methods to be automatically converted.'
-                );
-            }
-        } elseif (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        } elseif (is_numeric($value)) {
-            return (string) $value;
-        } else {
-            return (string) $value;
-        }
-    }
-
-    /**
-     * Get nested value from array using dot notation.
-     */
-    protected function getNestedValue(array $array, string $key)
-    {
-        return data_get($array, $key);
-    }
-
-    /**
-     * Update the model with HubSpot ID.
-     */
-    protected function updateModelHubspotId(string $hubspotId): void
-    {
-        if (! $this->modelClass || ! class_exists($this->modelClass)) {
-            return;
-        }
-
-        $model = $this->modelClass::find($this->modelData['id'] ?? null);
-        if ($model) {
-            $model->update(['hubspot_id' => $hubspotId]);
-        }
     }
 
     /**
