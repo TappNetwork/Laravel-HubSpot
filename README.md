@@ -145,7 +145,6 @@ HUBSPOT_QUEUE_ENABLED=false
    - `crm.objects.contacts.write`
    - `crm.objects.companies.read`
    - `crm.objects.companies.write`
-   - `crm.objects.owners.read`
 
 3. Sync test properties:
 ```bash
