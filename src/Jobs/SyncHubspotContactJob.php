@@ -2,6 +2,7 @@
 
 namespace Tapp\LaravelHubspot\Jobs;
 
+use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
 class SyncHubspotContactJob extends BaseHubspotJob
@@ -12,6 +13,12 @@ class SyncHubspotContactJob extends BaseHubspotJob
     protected function executeOperation(): void
     {
         $service = app(HubspotContactService::class);
+
+        Log::info('SyncHubspotContactJob executing operation', [
+            'operation' => $this->operation,
+            'has_hubspot_id' => ! empty($this->modelData['hubspot_id']),
+            'email' => $this->modelData['email'] ?? 'unknown',
+        ]);
 
         if ($this->operation === 'create') {
             $service->createContact($this->modelData, $this->modelClass);

@@ -205,6 +205,7 @@ class HubspotCompanyService
                 $bestMatch = $this->findBestNameMatch($cleanName, $searchResults['results']);
                 if ($bestMatch) {
                     // Convert object to array if needed
+                    /** @phpstan-ignore-next-line */
                     if (is_object($bestMatch)) {
                         $bestMatch = [
                             'id' => $bestMatch->getId(),

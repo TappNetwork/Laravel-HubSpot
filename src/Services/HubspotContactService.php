@@ -54,6 +54,11 @@ class HubspotContactService
                     // Update the model with existing HubSpot ID
                     $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
 
+                    // Update the contact properties with new data
+                    $data['hubspot_id'] = $contact['id'];
+                    $data['modelClass'] = $modelClass;
+                    $this->updateContact($data);
+
                     // Handle company association
                     $this->associateCompanyIfNeeded($contact['id'], $data);
 
@@ -71,6 +76,32 @@ class HubspotContactService
                     'property_map' => $data['hubspotMap'] ?? [],
                 ]);
                 throw new \Exception('HubSpot API validation error: '.$e->getMessage());
+            }
+
+            throw $e;
+        } catch (\Exception $e) {
+            // Handle "Contact already exists" error that might not be an ApiException
+            if (str_contains($e->getMessage(), 'Contact already exists') && ! empty($data['email'])) {
+                Log::info('HubSpot contact already exists, finding by email', [
+                    'email' => $data['email'],
+                    'error' => $e->getMessage(),
+                ]);
+
+                $contact = $this->findContact(['email' => $data['email']]);
+                if ($contact && isset($contact['id'])) {
+                    // Update the model with existing HubSpot ID
+                    $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
+
+                    // Update the contact properties with new data
+                    $data['hubspot_id'] = $contact['id'];
+                    $data['modelClass'] = $modelClass;
+                    $this->updateContact($data);
+
+                    // Handle company association
+                    $this->associateCompanyIfNeeded($contact['id'], $data);
+
+                    return $contact;
+                }
             }
 
             throw $e;
@@ -108,6 +139,15 @@ class HubspotContactService
         // Use hubspotUpdateMap if defined and not empty, otherwise default to hubspotMap
         $map = (! empty($data['hubspotUpdateMap'])) ? $data['hubspotUpdateMap'] : ($data['hubspotMap'] ?? []);
         $properties = $this->buildPropertiesObject($map, $data);
+
+        // Log the properties being sent for debugging
+        $propertiesArray = $this->buildPropertiesArray($map, $data);
+        Log::info('Updating HubSpot contact with properties', [
+            'hubspot_id' => $data['hubspot_id'],
+            'email' => $data['email'] ?? 'unknown',
+            'properties_sent' => $propertiesArray,
+            'property_map' => $map,
+        ]);
 
         try {
             $hubspotContact = Hubspot::crm()->contacts()->basicApi()->update(
@@ -319,6 +359,7 @@ class HubspotContactService
     {
         $properties = [];
 
+        // Process mapped properties
         foreach ($map as $hubspotProperty => $modelProperty) {
             $value = $this->getNestedValue($data, $modelProperty);
 
@@ -326,6 +367,31 @@ class HubspotContactService
                 $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
+                }
+            }
+        }
+
+        // Process dynamic properties that are explicitly added by hubspotProperties method
+        if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
+            foreach ($data['dynamicProperties'] as $hubspotProperty => $value) {
+                // If this property is in the map but wasn't found above, use the dynamic property
+                // Otherwise, add it if it's not already in the map
+                if (array_key_exists($hubspotProperty, $map)) {
+                    // Only add if it wasn't already processed above
+                    if (! array_key_exists($hubspotProperty, $properties)) {
+                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        if ($convertedValue !== null) {
+                            $properties[$hubspotProperty] = $convertedValue;
+                        }
+                    }
+                } else {
+                    // Convert and add dynamic property
+                    if ($value !== null) {
+                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        if ($convertedValue !== null) {
+                            $properties[$hubspotProperty] = $convertedValue;
+                        }
+                    }
                 }
             }
         }
@@ -355,16 +421,23 @@ class HubspotContactService
         // Process dynamic properties that are explicitly added by hubspotProperties method
         if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
             foreach ($data['dynamicProperties'] as $hubspotProperty => $value) {
-                // Skip if this property is already processed as a mapped property
+                // If this property is in the map but wasn't found above, use the dynamic property
+                // Otherwise, add it if it's not already in the map
                 if (array_key_exists($hubspotProperty, $map)) {
-                    continue;
-                }
-
-                // Convert and add dynamic property
-                if ($value !== null) {
-                    $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
-                    if ($convertedValue !== null) {
-                        $properties[$hubspotProperty] = $convertedValue;
+                    // Only add if it wasn't already processed above
+                    if (! array_key_exists($hubspotProperty, $properties)) {
+                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        if ($convertedValue !== null) {
+                            $properties[$hubspotProperty] = $convertedValue;
+                        }
+                    }
+                } else {
+                    // Convert and add dynamic property
+                    if ($value !== null) {
+                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        if ($convertedValue !== null) {
+                            $properties[$hubspotProperty] = $convertedValue;
+                        }
                     }
                 }
             }
