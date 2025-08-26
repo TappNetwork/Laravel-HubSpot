@@ -61,7 +61,11 @@
         ],
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
+        "test-unit": "vendor/bin/pest --group=unit",
+        "test-integration": "vendor/bin/pest --group=integration",
+        "test-feature": "vendor/bin/pest --group=feature",
         "test-coverage": "vendor/bin/pest --coverage",
+        "test-coverage-unit": "vendor/bin/pest --group=unit --coverage",
         "format": "vendor/bin/pint"
     },
     "config": {

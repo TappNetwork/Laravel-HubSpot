@@ -1,19 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
-			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 6
-			path: config/hubspot.php
-
-		-
-			message: '#^Trait Tapp\\LaravelHubspot\\Models\\HubspotCompany is used zero times and is not analysed\.$#'
-			identifier: trait.unused
-			count: 1
-			path: src/Models/HubspotCompany.php
-
-		-
-			message: '#^Trait Tapp\\LaravelHubspot\\Models\\HubspotContact is used zero times and is not analysed\.$#'
-			identifier: trait.unused
-			count: 1
-			path: src/Models/HubspotContact.php
+			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
+			count: 3
+			path: src/Services/HubspotContactService.php

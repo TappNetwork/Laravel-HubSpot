@@ -7,7 +7,6 @@ use HubSpot\Client\Crm\Properties\Model\BatchInputPropertyCreate;
 use HubSpot\Client\Crm\Properties\Model\PropertyCreate;
 use HubSpot\Client\Crm\Properties\Model\PropertyGroupCreate;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 
 class SyncHubspotProperties extends Command
@@ -59,7 +58,6 @@ class SyncHubspotProperties extends Command
 
     public function syncProperties($object, $model, $group)
     {
-        // @phpstan-ignore-next-line
         $response = Hubspot::crm()->properties()->coreApi()->getAll($object, false);
 
         $hubspotProperties = collect($response->getResults())->pluck('name');
@@ -99,12 +97,10 @@ class SyncHubspotProperties extends Command
         ]);
 
         try {
-            // @phpstan-ignore-next-line
             $response = Hubspot::crm()->properties()->batchApi()->create($object, $data);
         } catch (ApiException $e) {
-            $this->warn('Error creating properties. '.$e->getResponseBody());
-
-            Log::error($e);
+            $this->error('Error creating properties: '.$e->getMessage());
+            throw $e;
         }
 
         $this->info("{$object} properties created");
@@ -119,12 +115,10 @@ class SyncHubspotProperties extends Command
         ]);
 
         try {
-            // @phpstan-ignore-next-line
             return Hubspot::crm()->properties()->groupsApi()->create($object, $propertyGroupCreate);
         } catch (ApiException $e) {
             $this->warn('Error creating property group. '.$e->getResponseBody());
-
-            Log::error($e);
+            // Property group might already exist, don't throw for this case
         }
     }
 }

@@ -1,11 +1,49 @@
+# IDE and Editor files
 .idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.testing
+.env.local
+.env.*.local
+
+# Testing and Coverage
 .phpunit.cache
-build
-composer.lock
 coverage
-docs
-phpunit.xml
-phpstan.neon
+coverage.sh
 testbench.yaml
+tests/*.md
+
+# Scripts (keep in repo but ignore any generated files)
+scripts/
+scripts/*.log
+
+# Build and Documentation
+build
+docs
+
+# Dependencies
 vendor
 node_modules
+composer.lock
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
