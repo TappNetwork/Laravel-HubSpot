@@ -27,6 +27,7 @@ build
 # Dependencies
 vendor
 node_modules
+composer.lock
 
 # Logs
 *.log
