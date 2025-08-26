@@ -179,6 +179,7 @@ class HubspotContactService
 
         // Convert SimplePublicObject to array for consistency
         if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject) {
+            /** @var \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject $hubspotContact */
             return [
                 'id' => $hubspotContact->getId(),
                 'properties' => $hubspotContact->getProperties() ?? [],
@@ -264,6 +265,7 @@ class HubspotContactService
     {
         // Convert SimplePublicObject to array for consistency
         if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations) {
+            /** @var \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations $contact */
             return [
                 'id' => $contact->getId(),
                 'properties' => $contact->getProperties() ?? [],

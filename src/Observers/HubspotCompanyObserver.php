@@ -3,6 +3,7 @@
 namespace Tapp\LaravelHubspot\Observers;
 
 use Illuminate\Database\Eloquent\Model;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotCompanyJob;
 
 class HubspotCompanyObserver
@@ -45,8 +46,13 @@ class HubspotCompanyObserver
             return false;
         }
 
-        // Check if model has HubSpot configuration
-        if (! property_exists($model, 'hubspotMap') || empty($model->hubspotMap)) {
+        // Check if model implements HubspotModelInterface and has HubSpot configuration
+        if (! $model instanceof HubspotModelInterface) {
+            return false;
+        }
+
+        $hubspotMap = $model->getHubspotMap();
+        if (empty($hubspotMap)) {
             return false;
         }
 
@@ -58,7 +64,11 @@ class HubspotCompanyObserver
      */
     protected function hasHubspotRelevantChanges(Model $model): bool
     {
-        $hubspotFields = array_values($model->hubspotMap);
+        if (! $model instanceof HubspotModelInterface) {
+            return false;
+        }
+
+        $hubspotFields = array_values($model->getHubspotMap());
 
         // Check if any HubSpot-mapped fields have changed
         foreach ($hubspotFields as $field) {
@@ -90,14 +100,18 @@ class HubspotCompanyObserver
      */
     protected function prepareJobData(Model $model): array
     {
+        if (! $model instanceof HubspotModelInterface) {
+            return [];
+        }
+
         $data = [
-            'id' => $model->id,
-            'hubspot_id' => $model->hubspot_id ?? null,
-            'hubspotMap' => $model->hubspotMap ?? [],
+            'id' => $model->getKey(),
+            'hubspot_id' => $model->getHubspotId(),
+            'hubspotMap' => $model->getHubspotMap(),
         ];
 
         // Only include HubSpot-mapped fields
-        foreach ($model->hubspotMap as $hubspotField => $modelField) {
+        foreach ($model->getHubspotMap() as $hubspotField => $modelField) {
             $data[$modelField] = $this->getNestedValue($model, $modelField);
         }
 

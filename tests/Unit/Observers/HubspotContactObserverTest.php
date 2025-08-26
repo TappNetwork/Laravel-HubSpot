@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Eloquent\Model;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
+use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
 beforeEach(function () {
     $this->observer = new HubspotContactObserver;
@@ -9,15 +11,32 @@ beforeEach(function () {
 
 test('it includes dynamic properties from overridden hubspot properties method', function () {
     // Create a test model that overrides hubspotProperties method
-    $testModel = new class extends Model
+    $testModel = new class extends Model implements HubspotModelInterface
     {
+        use HubspotModelTrait;
+
         public array $hubspotMap = [
             'email' => 'email',
             'firstname' => 'first_name',
             'lastname' => 'last_name',
         ];
 
-        public function hubspotProperties(array $map): array
+        public function getHubspotMap(): array
+        {
+            return $this->hubspotMap;
+        }
+
+        public function getHubspotUpdateMap(): array
+        {
+            return $this->hubspotUpdateMap ?? [];
+        }
+
+        public function getHubspotCompanyRelation(): ?string
+        {
+            return $this->hubspotCompanyRelation ?? null;
+        }
+
+        public function getHubspotProperties(array $map): array
         {
             $properties = [];
 
@@ -35,6 +54,16 @@ test('it includes dynamic properties from overridden hubspot properties method',
             $properties['last_course_access'] = '2024-01-15';
 
             return $properties;
+        }
+
+        public function getHubspotId(): ?string
+        {
+            return $this->hubspot_id ?? null;
+        }
+
+        public function setHubspotId(?string $hubspotId): void
+        {
+            $this->hubspot_id = $hubspotId;
         }
     };
 
