@@ -10,7 +10,7 @@ class DebugHubspotDataTest extends TestCase
     /** @test */
     public function it_extends_console_command()
     {
-        $command = new DebugHubspotData();
+        $command = new DebugHubspotData;
 
         $this->assertInstanceOf(\Illuminate\Console\Command::class, $command);
     }
@@ -18,9 +18,8 @@ class DebugHubspotDataTest extends TestCase
     /** @test */
     public function it_has_correct_description()
     {
-        $command = new DebugHubspotData();
+        $command = new DebugHubspotData;
 
         $this->assertNotEmpty($command->getDescription());
     }
 }
-

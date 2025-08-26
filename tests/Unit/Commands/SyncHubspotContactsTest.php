@@ -2,10 +2,6 @@
 
 namespace Tapp\LaravelHubspot\Tests\Unit\Commands;
 
-use Illuminate\Console\Application;
-use Illuminate\Console\OutputStyle;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
 use Tapp\LaravelHubspot\Commands\SyncHubspotContacts;
 use Tapp\LaravelHubspot\Tests\TestCase;
 
@@ -14,7 +10,7 @@ class SyncHubspotContactsTest extends TestCase
     /** @test */
     public function it_has_correct_signature()
     {
-        $command = new SyncHubspotContacts();
+        $command = new SyncHubspotContacts;
         $reflection = new \ReflectionClass($command);
         $signatureProperty = $reflection->getProperty('signature');
         $signatureProperty->setAccessible(true);
@@ -28,7 +24,7 @@ class SyncHubspotContactsTest extends TestCase
     /** @test */
     public function it_has_correct_description()
     {
-        $command = new SyncHubspotContacts();
+        $command = new SyncHubspotContacts;
         $reflection = new \ReflectionClass($command);
         $descriptionProperty = $reflection->getProperty('description');
         $descriptionProperty->setAccessible(true);
@@ -39,7 +35,7 @@ class SyncHubspotContactsTest extends TestCase
     /** @test */
     public function it_has_correct_default_options()
     {
-        $command = new SyncHubspotContacts();
+        $command = new SyncHubspotContacts;
         $reflection = new \ReflectionClass($command);
         $signatureProperty = $reflection->getProperty('signature');
         $signatureProperty->setAccessible(true);
@@ -53,7 +49,7 @@ class SyncHubspotContactsTest extends TestCase
     /** @test */
     public function it_extends_console_command()
     {
-        $command = new SyncHubspotContacts();
+        $command = new SyncHubspotContacts;
 
         $this->assertInstanceOf(\Illuminate\Console\Command::class, $command);
     }

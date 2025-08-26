@@ -55,7 +55,7 @@ class TestCase extends Orchestra
     {
         return env('HUBSPOT_USE_REAL_API', false) &&
                config('hubspot.api_key') &&
-               !config('hubspot.disabled');
+               ! config('hubspot.disabled');
     }
 
     /**
@@ -63,7 +63,7 @@ class TestCase extends Orchestra
      */
     protected function skipIfNoRealApi(): void
     {
-        if (!$this->useRealApi()) {
+        if (! $this->useRealApi()) {
             $this->markTestSkipped('Real API testing disabled. Set HUBSPOT_USE_REAL_API=true and provide HUBSPOT_TEST_API_KEY to enable.');
         }
     }

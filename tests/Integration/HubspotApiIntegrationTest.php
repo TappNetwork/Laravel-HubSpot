@@ -2,12 +2,11 @@
 
 namespace Tapp\LaravelHubspot\Tests\Integration;
 
-use Tapp\LaravelHubspot\Tests\TestCase;
-use Tapp\LaravelHubspot\Facades\Hubspot;
-use Tapp\LaravelHubspot\Services\HubspotContactService;
-use Tapp\LaravelHubspot\Models\HubspotContact;
-use Tapp\LaravelHubspot\Models\HubspotCompany;
 use Illuminate\Support\Facades\Log;
+use Tapp\LaravelHubspot\Facades\Hubspot;
+use Tapp\LaravelHubspot\Models\HubspotCompany;
+use Tapp\LaravelHubspot\Models\HubspotContact;
+use Tapp\LaravelHubspot\Tests\TestCase;
 
 class HubspotApiIntegrationTest extends TestCase
 {
@@ -16,7 +15,7 @@ class HubspotApiIntegrationTest extends TestCase
         parent::setUp();
 
         // Skip tests if no HubSpot API key is configured
-        if (!config('hubspot.api_key') || config('hubspot.disabled')) {
+        if (! config('hubspot.api_key') || config('hubspot.disabled')) {
             $this->markTestSkipped('HubSpot API key not configured or disabled');
         }
     }
@@ -27,7 +26,7 @@ class HubspotApiIntegrationTest extends TestCase
         try {
             // Test basic API connection by creating a simple contact
             $properties = [
-                'email' => 'test-' . uniqid() . '@example.com',
+                'email' => 'test-'.uniqid().'@example.com',
                 'firstname' => 'Test',
                 'lastname' => 'Connection',
             ];
@@ -42,7 +41,7 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestContact($contactId);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to connect to HubSpot API: ' . $e->getMessage());
+            $this->fail('Failed to connect to HubSpot API: '.$e->getMessage());
         }
     }
 
@@ -50,7 +49,7 @@ class HubspotApiIntegrationTest extends TestCase
     public function it_can_create_contact_via_service()
     {
         $testData = [
-            'email' => 'test-' . uniqid() . '@example.com',
+            'email' => 'test-'.uniqid().'@example.com',
             'first_name' => 'Test',
             'last_name' => 'User',
         ];
@@ -77,7 +76,7 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestContact($contactId);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to create contact: ' . $e->getMessage());
+            $this->fail('Failed to create contact: '.$e->getMessage());
         }
     }
 
@@ -85,7 +84,7 @@ class HubspotApiIntegrationTest extends TestCase
     public function it_can_create_company_via_trait()
     {
         $testCompany = new TestCompany([
-            'name' => 'Test Company ' . uniqid(),
+            'name' => 'Test Company '.uniqid(),
             'domain' => 'testcompany.com',
         ]);
 
@@ -107,7 +106,7 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestCompany($companyId);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to create company: ' . $e->getMessage());
+            $this->fail('Failed to create company: '.$e->getMessage());
         }
     }
 
@@ -115,7 +114,7 @@ class HubspotApiIntegrationTest extends TestCase
     public function it_can_create_contact_via_trait()
     {
         $testUser = new TestUser([
-            'email' => 'test-' . uniqid() . '@example.com',
+            'email' => 'test-'.uniqid().'@example.com',
             'first_name' => 'Test',
             'last_name' => 'User',
         ]);
@@ -134,14 +133,14 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestContact($contactId);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to create contact: ' . $e->getMessage());
+            $this->fail('Failed to create contact: '.$e->getMessage());
         }
     }
 
     /** @test */
     public function it_handles_duplicate_contact_creation()
     {
-        $email = 'test-' . uniqid() . '@example.com';
+        $email = 'test-'.uniqid().'@example.com';
 
         $testUser1 = new TestUser([
             'email' => $email,
@@ -177,14 +176,14 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestContact($contact1Id);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to handle duplicate contact: ' . $e->getMessage());
+            $this->fail('Failed to handle duplicate contact: '.$e->getMessage());
         }
     }
 
     /** @test */
     public function it_can_find_contact_by_email()
     {
-        $email = 'test-' . uniqid() . '@example.com';
+        $email = 'test-'.uniqid().'@example.com';
 
         $testUser = new TestUser([
             'email' => $email,
@@ -207,7 +206,7 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestContact($contact['id']);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to find contact by email: ' . $e->getMessage());
+            $this->fail('Failed to find contact by email: '.$e->getMessage());
         }
     }
 
@@ -215,7 +214,7 @@ class HubspotApiIntegrationTest extends TestCase
     public function it_validates_contact_exists()
     {
         $testUser = new TestUser([
-            'email' => 'test-' . uniqid() . '@example.com',
+            'email' => 'test-'.uniqid().'@example.com',
             'first_name' => 'Test',
             'last_name' => 'User',
         ]);
@@ -236,7 +235,7 @@ class HubspotApiIntegrationTest extends TestCase
             $this->cleanupTestContact($contact['id']);
 
         } catch (\Exception $e) {
-            $this->fail('Failed to validate contact: ' . $e->getMessage());
+            $this->fail('Failed to validate contact: '.$e->getMessage());
         }
     }
 
@@ -250,7 +249,7 @@ class HubspotApiIntegrationTest extends TestCase
         } catch (\Exception $e) {
             Log::warning('Failed to cleanup test contact', [
                 'contact_id' => $contactId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -265,7 +264,7 @@ class HubspotApiIntegrationTest extends TestCase
         } catch (\Exception $e) {
             Log::warning('Failed to cleanup test company', [
                 'company_id' => $companyId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

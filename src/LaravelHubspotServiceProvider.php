@@ -9,12 +9,9 @@ use GuzzleHttp\Utils;
 use Psr\Http\Message\RequestInterface;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Tapp\LaravelHubspot\Commands\DebugHubspotData;
 use Tapp\LaravelHubspot\Commands\SyncHubspotContacts;
 use Tapp\LaravelHubspot\Commands\SyncHubspotProperties;
-
-use Tapp\LaravelHubspot\Commands\DebugHubspotData;
-use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
-use Tapp\LaravelHubspot\Observers\HubspotCompanyObserver;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
 class LaravelHubspotServiceProvider extends PackageServiceProvider

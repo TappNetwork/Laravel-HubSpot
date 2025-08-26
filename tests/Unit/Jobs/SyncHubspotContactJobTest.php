@@ -2,16 +2,13 @@
 
 namespace Tapp\LaravelHubspot\Tests\Unit\Jobs;
 
-
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
-use Tapp\LaravelHubspot\Services\HubspotContactService;
 use Tapp\LaravelHubspot\Tests\TestCase;
 
 class SyncHubspotContactJobTest extends TestCase
 {
-
     /** @test */
     public function it_creates_contact_when_operation_is_create()
     {
@@ -19,7 +16,7 @@ class SyncHubspotContactJobTest extends TestCase
 
         $modelData = [
             'id' => 1,
-            'email' => 'test-' . uniqid() . '@example.com',
+            'email' => 'test-'.uniqid().'@example.com',
             'first_name' => 'Test',
             'last_name' => 'User',
             'hubspotMap' => [
@@ -45,7 +42,7 @@ class SyncHubspotContactJobTest extends TestCase
         $modelData = [
             'id' => 1,
             'hubspot_id' => '12345',
-            'email' => 'test-' . uniqid() . '@example.com',
+            'email' => 'test-'.uniqid().'@example.com',
             'first_name' => 'Updated',
             'last_name' => 'User',
             'hubspotMap' => [

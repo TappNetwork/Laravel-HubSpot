@@ -45,7 +45,7 @@ uses()->group('feature')->in('Feature');
 beforeEach(function () {
     // Skip integration tests if no HubSpot API key is configured
     if (str_contains($this->getTestName(), 'Integration') &&
-        (!config('hubspot.api_key') || config('hubspot.disabled'))) {
+        (! config('hubspot.api_key') || config('hubspot.disabled'))) {
         $this->markTestSkipped('HubSpot API key not configured or disabled for integration tests');
     }
 });

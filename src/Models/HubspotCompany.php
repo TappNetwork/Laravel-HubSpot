@@ -44,7 +44,7 @@ trait HubspotCompany
         }
 
         // Validate that the company exists in HubSpot before attempting update
-        if (!static::validateHubspotCompanyExists($model->hubspot_id)) {
+        if (! static::validateHubspotCompanyExists($model->hubspot_id)) {
             // Try to find by name without clearing the invalid ID
             if ($model->name) {
                 $company = static::findCompanyByName($model->name);
@@ -74,7 +74,7 @@ trait HubspotCompany
                     'properties_sent' => $properties,
                     'property_map' => $model->hubspotMap,
                 ]);
-                throw new \Exception('HubSpot API validation error: ' . $e->getMessage());
+                throw new \Exception('HubSpot API validation error: '.$e->getMessage());
             }
             throw $e;
         }
@@ -192,6 +192,7 @@ trait HubspotCompany
     {
         try {
             Hubspot::crm()->companies()->basicApi()->getById($hubspotId);
+
             return true;
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
@@ -199,6 +200,7 @@ trait HubspotCompany
                     'hubspot_id' => $hubspotId,
                     'error' => $e->getMessage(),
                 ]);
+
                 return false;
             }
             throw $e;
@@ -274,8 +276,7 @@ trait HubspotCompany
             // Skip null values to avoid sending them to HubSpot
             elseif (is_null($propertyValue)) {
                 continue;
-            }
-            else {
+            } else {
                 $properties[$key] = $propertyValue;
             }
         }

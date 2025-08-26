@@ -3,10 +3,10 @@
 namespace Tapp\LaravelHubspot\Jobs;
 
 use HubSpot\Client\Crm\Companies\ApiException;
-use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyObject;
-use HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest as CompanySearch;
 use HubSpot\Client\Crm\Companies\Model\Filter;
 use HubSpot\Client\Crm\Companies\Model\FilterGroup;
+use HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest as CompanySearch;
+use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyObject;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,6 +20,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries;
+
     public $backoff;
 
     /**
@@ -89,7 +90,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
             $this->updateModelHubspotId($companyId);
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate company name) by finding existing company
-            if ($e->getCode() === 409 && !empty($this->modelData['name'])) {
+            if ($e->getCode() === 409 && ! empty($this->modelData['name'])) {
                 Log::info('HubSpot company already exists, finding by name', [
                     'name' => $this->modelData['name'],
                     'error' => $e->getMessage(),
@@ -100,6 +101,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
                     // Update the model with existing HubSpot ID
                     $companyId = is_array($company) ? $company['id'] : $company->getId();
                     $this->updateModelHubspotId($companyId);
+
                     return;
                 }
             }
@@ -111,7 +113,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
                     'error' => $e->getMessage(),
                     'properties_sent' => $this->modelData['hubspotMap'] ?? [],
                 ]);
-                throw new \Exception('HubSpot API validation error: ' . $e->getMessage());
+                throw new \Exception('HubSpot API validation error: '.$e->getMessage());
             }
 
             throw $e;
@@ -124,7 +126,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
     protected function updateCompany(): void
     {
         if (empty($this->modelData['hubspot_id'])) {
-            throw new \Exception('HubSpot ID missing. Cannot update company: ' . ($this->modelData['name'] ?? 'unknown'));
+            throw new \Exception('HubSpot ID missing. Cannot update company: '.($this->modelData['name'] ?? 'unknown'));
         }
 
         $properties = $this->buildPropertiesObject($this->modelData['hubspotMap'] ?? []);
@@ -162,7 +164,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
         $value = $array;
 
         foreach ($keys as $k) {
-            if (!isset($value[$k])) {
+            if (! isset($value[$k])) {
                 return null;
             }
             $value = $value[$k];
@@ -176,7 +178,7 @@ class SyncHubspotCompanyJob implements ShouldQueue
      */
     protected function updateModelHubspotId(string $hubspotId): void
     {
-        if (!$this->modelClass || !class_exists($this->modelClass)) {
+        if (! $this->modelClass || ! class_exists($this->modelClass)) {
             return;
         }
 
@@ -220,5 +222,3 @@ class SyncHubspotCompanyJob implements ShouldQueue
         return null;
     }
 }
-
-

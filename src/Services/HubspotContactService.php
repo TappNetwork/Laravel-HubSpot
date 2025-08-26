@@ -36,10 +36,11 @@ class HubspotContactService
                     'properties' => $hubspotContact->getProperties() ?? [],
                 ];
             }
+
             return $hubspotContact;
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate email) by finding existing contact
-            if ($e->getCode() === 409 && !empty($data['email'])) {
+            if ($e->getCode() === 409 && ! empty($data['email'])) {
                 Log::info('HubSpot contact already exists, finding by email', [
                     'email' => $data['email'],
                     'error' => $e->getMessage(),
@@ -66,7 +67,7 @@ class HubspotContactService
                     'properties_sent' => $propertiesArray,
                     'property_map' => $data['hubspotMap'] ?? [],
                 ]);
-                throw new \Exception('HubSpot API validation error: ' . $e->getMessage());
+                throw new \Exception('HubSpot API validation error: '.$e->getMessage());
             }
 
             throw $e;
@@ -79,13 +80,13 @@ class HubspotContactService
     public function updateContact(array $data): array
     {
         if (empty($data['hubspot_id'])) {
-            throw new \Exception('HubSpot ID missing. Cannot update contact: ' . ($data['email'] ?? 'unknown'));
+            throw new \Exception('HubSpot ID missing. Cannot update contact: '.($data['email'] ?? 'unknown'));
         }
 
         // Validate that the contact exists in HubSpot before attempting update
-        if (!$this->validateHubspotContactExists($data['hubspot_id'])) {
+        if (! $this->validateHubspotContactExists($data['hubspot_id'])) {
             // Try to find by email without clearing the invalid ID
-            if (!empty($data['email'])) {
+            if (! empty($data['email'])) {
                 $contact = $this->findContactByEmail($data['email']);
                 if ($contact) {
                     // Update with correct hubspot_id and retry
@@ -97,12 +98,12 @@ class HubspotContactService
                     return $this->createContact($data, $data['modelClass'] ?? '');
                 }
             } else {
-                throw new \Exception('Invalid HubSpot ID and no email provided for contact: ' . ($data['email'] ?? 'unknown'));
+                throw new \Exception('Invalid HubSpot ID and no email provided for contact: '.($data['email'] ?? 'unknown'));
             }
         }
 
         // Use hubspotUpdateMap if defined and not empty, otherwise default to hubspotMap
-        $map = (!empty($data['hubspotUpdateMap'])) ? $data['hubspotUpdateMap'] : ($data['hubspotMap'] ?? []);
+        $map = (! empty($data['hubspotUpdateMap'])) ? $data['hubspotUpdateMap'] : ($data['hubspotMap'] ?? []);
         $properties = $this->buildPropertiesObject($map, $data);
 
         try {
@@ -120,7 +121,7 @@ class HubspotContactService
                     'properties_sent' => $propertiesArray,
                     'property_map' => $map,
                 ]);
-                throw new \Exception('HubSpot API validation error: ' . $e->getMessage());
+                throw new \Exception('HubSpot API validation error: '.$e->getMessage());
             }
             throw $e;
         }
@@ -135,6 +136,7 @@ class HubspotContactService
                 'properties' => $hubspotContact->getProperties() ?? [],
             ];
         }
+
         return $hubspotContact;
     }
 
@@ -145,6 +147,7 @@ class HubspotContactService
     {
         try {
             Hubspot::crm()->contacts()->basicApi()->getById($hubspotId);
+
             return true;
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
@@ -152,6 +155,7 @@ class HubspotContactService
                     'hubspot_id' => $hubspotId,
                     'error' => $e->getMessage(),
                 ]);
+
                 return false;
             }
             throw $e;
@@ -197,14 +201,12 @@ class HubspotContactService
         }
     }
 
-
-
     /**
      * Find a contact by email or ID.
      */
     public function findContact(array $data): ?array
     {
-        if (!empty($data['hubspot_id'])) {
+        if (! empty($data['hubspot_id'])) {
             try {
                 return Hubspot::crm()->contacts()->basicApi()->getById($data['hubspot_id']);
             } catch (ApiException $e) {
@@ -215,7 +217,7 @@ class HubspotContactService
             }
         }
 
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             try {
                 $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['email'], null, null, null, false, 'email');
 
@@ -242,7 +244,7 @@ class HubspotContactService
         $invalidProperties = [];
 
         foreach ($properties as $key => $value) {
-            if (!is_string($value)) {
+            if (! is_string($value)) {
                 $invalidProperties[$key] = [
                     'value' => $value,
                     'type' => gettype($value),
@@ -251,10 +253,10 @@ class HubspotContactService
             }
         }
 
-        if (!empty($invalidProperties)) {
+        if (! empty($invalidProperties)) {
             throw new \InvalidArgumentException(
-                'HubSpot properties must be strings after automatic conversion. Invalid properties found: ' .
-                json_encode($invalidProperties, JSON_PRETTY_PRINT) .
+                'HubSpot properties must be strings after automatic conversion. Invalid properties found: '.
+                json_encode($invalidProperties, JSON_PRETTY_PRINT).
                 '. This indicates a data type that could not be automatically converted. Please ensure all properties are convertible to strings.'
             );
         }
@@ -273,6 +275,7 @@ class HubspotContactService
             if (empty($value)) {
                 return null;
             }
+
             return (array_keys($value) === range(0, count($value) - 1))
                 ? implode(', ', array_filter($value, 'is_scalar'))
                 : json_encode($value);
@@ -281,11 +284,12 @@ class HubspotContactService
                 return (string) $value;
             } elseif (method_exists($value, 'toArray')) {
                 $arrayValue = $value->toArray();
+
                 return is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
             } else {
                 throw new \InvalidArgumentException(
-                    "Cannot convert object of type " . get_class($value) . " to string for property: {$propertyName}. " .
-                    "Objects must implement __toString() or toArray() methods to be automatically converted."
+                    'Cannot convert object of type '.get_class($value)." to string for property: {$propertyName}. ".
+                    'Objects must implement __toString() or toArray() methods to be automatically converted.'
                 );
             }
         } elseif (is_bool($value)) {
@@ -355,7 +359,7 @@ class HubspotContactService
      */
     protected function updateModelHubspotId(?int $modelId, string $hubspotId, ?string $modelClass): void
     {
-        if (!$modelId || !$modelClass || !class_exists($modelClass)) {
+        if (! $modelId || ! $modelClass || ! class_exists($modelClass)) {
             return;
         }
 
@@ -371,7 +375,7 @@ class HubspotContactService
     protected function associateCompanyIfNeeded(string $contactId, array $data): void
     {
         $companyData = $data['hubspotCompanyRelation'] ?? null;
-        if (!$companyData || empty($companyData['hubspot_id'])) {
+        if (! $companyData || empty($companyData['hubspot_id'])) {
             return;
         }
 
@@ -405,5 +409,3 @@ class HubspotContactService
         }
     }
 }
-
-

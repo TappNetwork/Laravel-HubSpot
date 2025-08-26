@@ -12,7 +12,7 @@ class HubspotContactObserver
      */
     public function created(Model $model): void
     {
-        if (!$this->shouldSync($model)) {
+        if (! $this->shouldSync($model)) {
             return;
         }
 
@@ -24,12 +24,12 @@ class HubspotContactObserver
      */
     public function updated(Model $model): void
     {
-        if (!$this->shouldSync($model)) {
+        if (! $this->shouldSync($model)) {
             return;
         }
 
         // Only sync if HubSpot-relevant fields changed
-        if (!$this->hasHubspotRelevantChanges($model)) {
+        if (! $this->hasHubspotRelevantChanges($model)) {
             return;
         }
 
@@ -46,7 +46,7 @@ class HubspotContactObserver
         }
 
         // Check if model has HubSpot configuration
-        if (!property_exists($model, 'hubspotMap') || empty($model->hubspotMap)) {
+        if (! property_exists($model, 'hubspotMap') || empty($model->hubspotMap)) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class HubspotContactObserver
      */
     protected function dispatchSyncJob(Model $model, string $operation): void
     {
-        if (!config('hubspot.queue.enabled', true)) {
+        if (! config('hubspot.queue.enabled', true)) {
             // For synchronous operation, you could call a service here
             return;
         }
@@ -104,7 +104,7 @@ class HubspotContactObserver
         }
 
         // Include company relation data if it exists
-        if (!empty($model->hubspotCompanyRelation)) {
+        if (! empty($model->hubspotCompanyRelation)) {
             $company = $model->getRelationValue($model->hubspotCompanyRelation);
             if ($company) {
                 $data['hubspotCompanyRelation'] = [
@@ -125,5 +125,3 @@ class HubspotContactObserver
         return data_get($model, $key);
     }
 }
-
-

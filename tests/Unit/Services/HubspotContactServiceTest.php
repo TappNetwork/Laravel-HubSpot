@@ -2,24 +2,18 @@
 
 namespace Tapp\LaravelHubspot\Tests\Unit\Services;
 
-use HubSpot\Client\Crm\Contacts\ApiException;
-use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
-
-use Illuminate\Support\Facades\Log;
-use Mockery;
 use ReflectionClass;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 use Tapp\LaravelHubspot\Tests\TestCase;
 
 class HubspotContactServiceTest extends TestCase
 {
-
     protected HubspotContactService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new HubspotContactService();
+        $this->service = new HubspotContactService;
     }
 
     /** @test */
@@ -104,7 +98,7 @@ class HubspotContactServiceTest extends TestCase
         $method->setAccessible(true);
 
         // Test with non-existent email
-        $result = $method->invoke($this->service, 'nonexistent-' . uniqid() . '@example.com');
+        $result = $method->invoke($this->service, 'nonexistent-'.uniqid().'@example.com');
         $this->assertNull($result);
     }
 
@@ -115,7 +109,7 @@ class HubspotContactServiceTest extends TestCase
 
         $data = [
             'hubspot_id' => '999999999', // Non-existent ID
-            'email' => 'test-' . uniqid() . '@example.com', // Non-existent email
+            'email' => 'test-'.uniqid().'@example.com', // Non-existent email
         ];
 
         $result = $this->service->findContact($data);
@@ -164,7 +158,7 @@ class HubspotContactServiceTest extends TestCase
 
         $data = [
             'id' => 1,
-            'email' => 'test-' . uniqid() . '@example.com',
+            'email' => 'test-'.uniqid().'@example.com',
             'first_name' => 'Test',
             'last_name' => 'User',
             'hubspotMap' => [
@@ -207,6 +201,7 @@ class HubspotContactServiceTest extends TestCase
         } catch (\Exception $e) {
             // Expected exception
             $this->assertStringContainsString('validation', $e->getMessage());
+
             return;
         }
 

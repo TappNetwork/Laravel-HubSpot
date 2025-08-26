@@ -2,12 +2,12 @@
 
 namespace Tapp\LaravelHubspot\Tests\Unit;
 
-use Tapp\LaravelHubspot\Tests\TestCase;
-use Tapp\LaravelHubspot\Services\HubspotContactService;
-use Tapp\LaravelHubspot\Facades\Hubspot;
 use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
 use Mockery;
+use Tapp\LaravelHubspot\Facades\Hubspot;
+use Tapp\LaravelHubspot\Services\HubspotContactService;
+use Tapp\LaravelHubspot\Tests\TestCase;
 
 class HubspotContactServiceTest extends TestCase
 {
@@ -51,7 +51,7 @@ class HubspotContactServiceTest extends TestCase
     public function it_creates_contact_successfully()
     {
         // Mock the HubSpot API response
-        $mockResponse = new SimplePublicObject();
+        $mockResponse = new SimplePublicObject;
         $mockResponse->setId('12345');
         $mockResponse->setProperties([
             'email' => 'test@example.com',
@@ -85,7 +85,7 @@ class HubspotContactServiceTest extends TestCase
                 'email' => 'email',
                 'firstname' => 'first_name',
                 'lastname' => 'last_name',
-            ]
+            ],
         ];
 
         $result = $this->service->createContact($data, 'TestUser');
@@ -123,7 +123,7 @@ class HubspotContactServiceTest extends TestCase
                 'email' => 'email',
                 'firstname' => 'first_name',
                 'lastname' => 'last_name',
-            ]
+            ],
         ];
 
         $this->expectException(\Exception::class);
@@ -136,7 +136,7 @@ class HubspotContactServiceTest extends TestCase
     public function it_updates_contact_successfully()
     {
         // Mock the HubSpot API response
-        $mockResponse = new SimplePublicObject();
+        $mockResponse = new SimplePublicObject;
         $mockResponse->setId('12345');
         $mockResponse->setProperties([
             'email' => 'test@example.com',
@@ -175,7 +175,7 @@ class HubspotContactServiceTest extends TestCase
                 'email' => 'email',
                 'firstname' => 'first_name',
                 'lastname' => 'last_name',
-            ]
+            ],
         ];
 
         $result = $this->service->updateContact($data, 'TestUser');

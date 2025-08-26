@@ -2,7 +2,6 @@
 
 namespace Tapp\LaravelHubspot\Models;
 
-use HubSpot\Client\Crm\Associations\V4\ApiException as AssociationsApiException;
 use HubSpot\Client\Crm\Associations\V4\Model\AssociationSpec;
 use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
@@ -78,7 +77,7 @@ trait HubspotContact
         $data['hubspotCompanyRelation'] = $model->hubspotCompanyRelation ?? '';
 
         // Add company relation data if it exists
-        if (!empty($model->hubspotCompanyRelation)) {
+        if (! empty($model->hubspotCompanyRelation)) {
             $company = $model->getRelationValue($model->hubspotCompanyRelation);
             if ($company) {
                 $data['hubspotCompanyRelation'] = $company->toArray();
@@ -106,7 +105,7 @@ trait HubspotContact
         }
 
         if ($hubspotCompany && $hubspotCompany->hubspot_id) {
-            if (!isset($hubspotContact['id'])) {
+            if (! isset($hubspotContact['id'])) {
                 Log::warning('HubSpot contact is missing id. Cannot assign company.', [
                     'email' => $model->email,
                     'hubspot_contact' => $hubspotContact,
@@ -126,7 +125,7 @@ trait HubspotContact
         }
 
         // Validate that the contact exists in HubSpot before attempting update
-        if (!static::validateHubspotContactExists($model->hubspot_id)) {
+        if (! static::validateHubspotContactExists($model->hubspot_id)) {
             // Try to find by email without clearing the invalid ID
             if ($model->email) {
                 $contact = static::findContactByEmail($model->email);
@@ -158,7 +157,7 @@ trait HubspotContact
                     'properties_sent' => $properties,
                     'property_map' => $map,
                 ]);
-                throw new \Exception('HubSpot API validation error: ' . $e->getMessage());
+                throw new \Exception('HubSpot API validation error: '.$e->getMessage());
             }
             throw $e;
         }
@@ -212,6 +211,7 @@ trait HubspotContact
     {
         try {
             Hubspot::crm()->contacts()->basicApi()->getById($hubspotId);
+
             return true;
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
@@ -219,6 +219,7 @@ trait HubspotContact
                     'hubspot_id' => $hubspotId,
                     'error' => $e->getMessage(),
                 ]);
+
                 return false;
             }
             throw $e;
@@ -240,12 +241,10 @@ trait HubspotContact
         }
     }
 
-
-
     private static function getPropertyMap($model): array
     {
         // If hubspotUpdateMap is defined and not empty, use it
-        if (property_exists($model, 'hubspotUpdateMap') && !empty($model->hubspotUpdateMap)) {
+        if (property_exists($model, 'hubspotUpdateMap') && ! empty($model->hubspotUpdateMap)) {
             return $model->hubspotUpdateMap;
         }
 
@@ -261,7 +260,7 @@ trait HubspotContact
         $invalidProperties = [];
 
         foreach ($properties as $key => $value) {
-            if (!is_string($value)) {
+            if (! is_string($value)) {
                 $invalidProperties[$key] = [
                     'value' => $value,
                     'type' => gettype($value),
@@ -270,10 +269,10 @@ trait HubspotContact
             }
         }
 
-        if (!empty($invalidProperties)) {
+        if (! empty($invalidProperties)) {
             throw new \InvalidArgumentException(
-                'HubSpot properties must be strings after automatic conversion. Invalid properties found: ' .
-                json_encode($invalidProperties, JSON_PRETTY_PRINT) .
+                'HubSpot properties must be strings after automatic conversion. Invalid properties found: '.
+                json_encode($invalidProperties, JSON_PRETTY_PRINT).
                 '. This indicates a data type that could not be automatically converted. Please ensure all properties are convertible to strings.'
             );
         }
@@ -336,8 +335,8 @@ trait HubspotContact
                     $convertedProperties[$key] = is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
                 } else {
                     throw new \InvalidArgumentException(
-                        "Cannot convert object of type " . get_class($value) . " to string for property: {$key}. " .
-                        "Objects must implement __toString() or toArray() methods to be automatically converted."
+                        'Cannot convert object of type '.get_class($value)." to string for property: {$key}. ".
+                        'Objects must implement __toString() or toArray() methods to be automatically converted.'
                     );
                 }
             } elseif (is_bool($value)) {
@@ -394,7 +393,7 @@ trait HubspotContact
         }
 
         if ($hubspotCompany && $hubspotCompany->hubspot_id) {
-            if (!isset($hubspotContact['id'])) {
+            if (! isset($hubspotContact['id'])) {
                 Log::warning('HubSpot contact is missing id. Cannot assign company.', [
                     'email' => $model->email,
                     'hubspot_contact' => $hubspotContact,

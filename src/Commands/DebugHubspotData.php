@@ -3,7 +3,6 @@
 namespace Tapp\LaravelHubspot\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class DebugHubspotData extends Command
 {
@@ -40,10 +39,11 @@ class DebugHubspotData extends Command
 
         if ($contacts->isEmpty()) {
             $this->error('No contacts found.');
+
             return Command::FAILURE;
         }
 
-        $this->info("Debugging data for " . $contacts->count() . " contacts...");
+        $this->info('Debugging data for '.$contacts->count().' contacts...');
 
         foreach ($contacts as $contact) {
             $this->debugContact($contact);
@@ -60,23 +60,23 @@ class DebugHubspotData extends Command
         // Get the property map that will be used
         $map = $this->getPropertyMap($contact);
 
-        $this->line("Property Map Used: " . (empty($map) ? 'EMPTY' : 'hubspotMap'));
+        $this->line('Property Map Used: '.(empty($map) ? 'EMPTY' : 'hubspotMap'));
 
-        if (!empty($map)) {
-            $this->line("Raw Properties (before conversion):");
+        if (! empty($map)) {
+            $this->line('Raw Properties (before conversion):');
             foreach ($map as $hubspotProperty => $modelProperty) {
                 $value = $this->getPropertyValue($contact, $modelProperty);
-                $this->line("  {$hubspotProperty} => {$modelProperty} = " . $this->formatValue($value));
+                $this->line("  {$hubspotProperty} => {$modelProperty} = ".$this->formatValue($value));
             }
 
             $this->newLine();
-            $this->line("Converted Properties (what gets sent to HubSpot):");
+            $this->line('Converted Properties (what gets sent to HubSpot):');
             $convertedProperties = $this->getConvertedProperties($contact, $map);
             foreach ($convertedProperties as $hubspotProperty => $value) {
-                $this->line("  {$hubspotProperty} = " . $this->formatValue($value));
+                $this->line("  {$hubspotProperty} = ".$this->formatValue($value));
             }
         } else {
-            $this->warn("No properties will be sent to HubSpot (empty map)");
+            $this->warn('No properties will be sent to HubSpot (empty map)');
         }
 
         // Check for potential issues
@@ -86,7 +86,7 @@ class DebugHubspotData extends Command
     protected function getPropertyMap($contact): array
     {
         // Use the same logic as the trait
-        if (property_exists($contact, 'hubspotUpdateMap') && !empty($contact->hubspotUpdateMap)) {
+        if (property_exists($contact, 'hubspotUpdateMap') && ! empty($contact->hubspotUpdateMap)) {
             return $contact->hubspotUpdateMap;
         }
 
@@ -135,7 +135,7 @@ class DebugHubspotData extends Command
                     $arrayValue = $propertyValue->toArray();
                     $properties[$key] = is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
                 } else {
-                    $properties[$key] = "ERROR: Cannot convert " . get_class($propertyValue);
+                    $properties[$key] = 'ERROR: Cannot convert '.get_class($propertyValue);
                 }
             } elseif (is_bool($propertyValue)) {
                 $properties[$key] = $propertyValue ? 'true' : 'false';
@@ -156,21 +156,22 @@ class DebugHubspotData extends Command
         }
 
         if (is_array($value)) {
-            return 'ARRAY: ' . json_encode($value);
+            return 'ARRAY: '.json_encode($value);
         }
 
         if (is_object($value)) {
             if (method_exists($value, '__toString')) {
-                return 'OBJECT: ' . (string) $value;
+                return 'OBJECT: '.(string) $value;
             }
-            return 'OBJECT: ' . get_class($value);
+
+            return 'OBJECT: '.get_class($value);
         }
 
         if (is_bool($value)) {
-            return 'BOOLEAN: ' . ($value ? 'true' : 'false');
+            return 'BOOLEAN: '.($value ? 'true' : 'false');
         }
 
-        return gettype($value) . ': ' . (string) $value;
+        return gettype($value).': '.(string) $value;
     }
 
     protected function checkForIssues($contact): void
@@ -184,7 +185,7 @@ class DebugHubspotData extends Command
                 if (is_array($value)) {
                     $issues[] = "Array found in {$hubspotProperty} ({$modelProperty})";
                 }
-                if (is_object($value) && !method_exists($value, '__toString')) {
+                if (is_object($value) && ! method_exists($value, '__toString')) {
                     $issues[] = "Non-stringable object found in {$hubspotProperty} ({$modelProperty})";
                 }
             }
@@ -196,19 +197,19 @@ class DebugHubspotData extends Command
                 if (is_array($value)) {
                     $issues[] = "Array found in {$hubspotProperty} ({$modelProperty})";
                 }
-                if (is_object($value) && !method_exists($value, '__toString')) {
+                if (is_object($value) && ! method_exists($value, '__toString')) {
                     $issues[] = "Non-stringable object found in {$hubspotProperty} ({$modelProperty})";
                 }
             }
         }
 
-        if (!empty($issues)) {
-            $this->warn("Potential issues found:");
+        if (! empty($issues)) {
+            $this->warn('Potential issues found:');
             foreach ($issues as $issue) {
                 $this->line("  - {$issue}");
             }
         } else {
-            $this->info("No obvious issues found.");
+            $this->info('No obvious issues found.');
         }
     }
 }

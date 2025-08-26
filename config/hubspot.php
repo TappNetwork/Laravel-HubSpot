@@ -12,14 +12,9 @@ return [
     'queue' => [
         'enabled' => env('HUBSPOT_QUEUE_ENABLED', true),
         'connection' => env('HUBSPOT_QUEUE_CONNECTION', config('queue.default', 'sync')),
-        'queue' => env('HUBSPOT_QUEUE_NAME', config('queue.connections.' . config('queue.default', 'sync') . '.queue', 'default')),
+        'queue' => env('HUBSPOT_QUEUE_NAME', config('queue.connections.'.config('queue.default', 'sync').'.queue', 'default')),
         'retry_attempts' => env('HUBSPOT_QUEUE_RETRY_ATTEMPTS', 3),
         'retry_delay' => env('HUBSPOT_QUEUE_RETRY_DELAY', 60),
     ],
-
-
-
-
-
 
 ];

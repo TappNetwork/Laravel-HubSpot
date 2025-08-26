@@ -2,9 +2,7 @@
 
 namespace Tapp\LaravelHubspot\Tests\Unit\Observers;
 
-
 use Illuminate\Support\Facades\Queue;
-use Mockery;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
 use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
 use Tapp\LaravelHubspot\Tests\TestCase;
@@ -15,6 +13,7 @@ class ObserverTestUser extends \Illuminate\Database\Eloquent\Model
     use \Tapp\LaravelHubspot\Models\HubspotContact;
 
     protected $fillable = ['email', 'first_name', 'last_name'];
+
     protected $table = 'observer_test_users';
 
     public array $hubspotMap = [
@@ -33,13 +32,12 @@ class ObserverTestUser extends \Illuminate\Database\Eloquent\Model
 
 class HubspotContactObserverTest extends TestCase
 {
-
     protected HubspotContactObserver $observer;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->observer = new HubspotContactObserver();
+        $this->observer = new HubspotContactObserver;
         Queue::fake();
     }
 

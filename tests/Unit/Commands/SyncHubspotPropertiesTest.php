@@ -10,7 +10,7 @@ class SyncHubspotPropertiesTest extends TestCase
     /** @test */
     public function it_extends_console_command()
     {
-        $command = new SyncHubspotProperties();
+        $command = new SyncHubspotProperties;
 
         $this->assertInstanceOf(\Illuminate\Console\Command::class, $command);
     }
@@ -18,9 +18,8 @@ class SyncHubspotPropertiesTest extends TestCase
     /** @test */
     public function it_has_correct_description()
     {
-        $command = new SyncHubspotProperties();
+        $command = new SyncHubspotProperties;
 
         $this->assertNotEmpty($command->getDescription());
     }
 }
-

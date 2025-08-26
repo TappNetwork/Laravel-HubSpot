@@ -74,4 +74,3 @@ class SyncHubspotCompanyJobTest extends TestCase
         $job->failed($exception);
     }
 }
-

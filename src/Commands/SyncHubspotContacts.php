@@ -52,10 +52,9 @@ class SyncHubspotContacts extends Command
 
         if ($totalContacts === 0) {
             $this->info('No contacts found to sync.');
+
             return Command::SUCCESS;
         }
-
-
 
         $this->info("Starting HubSpot contact sync for {$totalContacts} contacts...");
         $this->info("Delay between API calls: {$delay}s");
@@ -76,7 +75,7 @@ class SyncHubspotContacts extends Command
             } catch (\Exception $e) {
                 $errorCount++;
                 $this->newLine();
-                $this->error("Failed to sync contact {$contact->email}: " . $e->getMessage());
+                $this->error("Failed to sync contact {$contact->email}: ".$e->getMessage());
                 $progressBar->advance();
             }
 
@@ -90,7 +89,7 @@ class SyncHubspotContacts extends Command
         $this->newLine(2);
 
         // Summary
-        $this->info("Sync Summary:");
+        $this->info('Sync Summary:');
         $this->info("- Total contacts processed: {$totalContacts}");
         $this->info("- Successful syncs: {$successCount}");
         $this->info("- Failed syncs: {$errorCount}");

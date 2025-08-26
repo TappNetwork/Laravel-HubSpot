@@ -7,7 +7,6 @@ use HubSpot\Client\Crm\Properties\Model\BatchInputPropertyCreate;
 use HubSpot\Client\Crm\Properties\Model\PropertyCreate;
 use HubSpot\Client\Crm\Properties\Model\PropertyGroupCreate;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 
 class SyncHubspotProperties extends Command
@@ -46,8 +45,9 @@ class SyncHubspotProperties extends Command
         // Get the model class from option or use a default
         $modelClass = $this->option('model') ?: config('hubspot.default_model', 'App\\Models\\User');
 
-        if (!class_exists($modelClass)) {
+        if (! class_exists($modelClass)) {
             $this->error("Model class {$modelClass} does not exist.");
+
             return Command::FAILURE;
         }
 

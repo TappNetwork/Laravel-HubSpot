@@ -13,6 +13,7 @@ class CompanyObserverTestModel extends \Illuminate\Database\Eloquent\Model
     use \Tapp\LaravelHubspot\Models\HubspotCompany;
 
     protected $fillable = ['name', 'domain'];
+
     protected $table = 'company_observer_test_models';
 
     public array $hubspotMap = [
@@ -28,7 +29,7 @@ class HubspotCompanyObserverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->observer = new HubspotCompanyObserver();
+        $this->observer = new HubspotCompanyObserver;
         Queue::fake();
     }
 
@@ -104,7 +105,7 @@ class HubspotCompanyObserverTest extends TestCase
         Queue::assertNotPushed(SyncHubspotCompanyJob::class);
     }
 
-        /** @test */
+    /** @test */
     public function it_prepares_job_data_correctly()
     {
         config(['hubspot.queue.enabled' => true]);

@@ -15,6 +15,7 @@ class SyncHubspotContactJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries;
+
     public $backoff;
 
     /**
