@@ -1,25 +1,27 @@
 <?php
 
-namespace Tapp\LaravelHubspot\Tests\Unit\Commands;
-
 use Tapp\LaravelHubspot\Commands\DebugHubspotData;
-use Tapp\LaravelHubspot\Tests\TestCase;
 
-class DebugHubspotDataTest extends TestCase
-{
-    /** @test */
-    public function it_extends_console_command()
-    {
-        $command = new DebugHubspotData;
+test('it has correct signature', function () {
+    $command = new DebugHubspotData;
+    $reflection = new \ReflectionClass($command);
+    $signatureProperty = $reflection->getProperty('signature');
+    $signatureProperty->setAccessible(true);
 
-        $this->assertInstanceOf(\Illuminate\Console\Command::class, $command);
-    }
+    expect($signatureProperty->getValue($command))->toBe('hubspot:debug-data {model=\App\Models\User} {--email= : Debug specific contact by email}');
+});
 
-    /** @test */
-    public function it_has_correct_description()
-    {
-        $command = new DebugHubspotData;
+test('it has correct description', function () {
+    $command = new DebugHubspotData;
+    $reflection = new \ReflectionClass($command);
+    $descriptionProperty = $reflection->getProperty('description');
+    $descriptionProperty->setAccessible(true);
 
-        $this->assertNotEmpty($command->getDescription());
-    }
-}
+    expect($descriptionProperty->getValue($command))->toBe('Debug HubSpot data to identify invalid properties.');
+});
+
+test('it extends console command', function () {
+    $command = new DebugHubspotData;
+
+    expect($command)->toBeInstanceOf(\Illuminate\Console\Command::class);
+});

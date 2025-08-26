@@ -1,56 +1,41 @@
 <?php
 
-namespace Tapp\LaravelHubspot\Tests\Unit\Commands;
-
 use Tapp\LaravelHubspot\Commands\SyncHubspotContacts;
-use Tapp\LaravelHubspot\Tests\TestCase;
 
-class SyncHubspotContactsTest extends TestCase
-{
-    /** @test */
-    public function it_has_correct_signature()
-    {
-        $command = new SyncHubspotContacts;
-        $reflection = new \ReflectionClass($command);
-        $signatureProperty = $reflection->getProperty('signature');
-        $signatureProperty->setAccessible(true);
+test('it has correct signature', function () {
+    $command = new SyncHubspotContacts;
+    $reflection = new \ReflectionClass($command);
+    $signatureProperty = $reflection->getProperty('signature');
+    $signatureProperty->setAccessible(true);
 
-        $this->assertEquals(
-            'hubspot:sync-contacts {model=\App\Models\User} {--delay=0 : Delay between API calls in seconds} {--limit= : Limit the total number of contacts to process}',
-            $signatureProperty->getValue($command)
-        );
-    }
+    expect($signatureProperty->getValue($command))->toBe(
+        'hubspot:sync-contacts {model=\App\Models\User} {--delay=0 : Delay between API calls in seconds} {--limit= : Limit the total number of contacts to process}'
+    );
+});
 
-    /** @test */
-    public function it_has_correct_description()
-    {
-        $command = new SyncHubspotContacts;
-        $reflection = new \ReflectionClass($command);
-        $descriptionProperty = $reflection->getProperty('description');
-        $descriptionProperty->setAccessible(true);
+test('it has correct description', function () {
+    $command = new SyncHubspotContacts;
+    $reflection = new \ReflectionClass($command);
+    $descriptionProperty = $reflection->getProperty('description');
+    $descriptionProperty->setAccessible(true);
 
-        $this->assertEquals('Create missing hubspot contacts.', $descriptionProperty->getValue($command));
-    }
+    expect($descriptionProperty->getValue($command))->toBe('Create missing hubspot contacts.');
+});
 
-    /** @test */
-    public function it_has_correct_default_options()
-    {
-        $command = new SyncHubspotContacts;
-        $reflection = new \ReflectionClass($command);
-        $signatureProperty = $reflection->getProperty('signature');
-        $signatureProperty->setAccessible(true);
-        $signature = $signatureProperty->getValue($command);
+test('it has correct default options', function () {
+    $command = new SyncHubspotContacts;
+    $reflection = new \ReflectionClass($command);
+    $signatureProperty = $reflection->getProperty('signature');
+    $signatureProperty->setAccessible(true);
+    $signature = $signatureProperty->getValue($command);
 
-        // Test that the command has the expected options
-        $this->assertStringContainsString('--delay=0', $signature);
-        $this->assertStringContainsString('--limit=', $signature);
-    }
+    // Test that the command has the expected options
+    expect($signature)->toContain('--delay=0');
+    expect($signature)->toContain('--limit=');
+});
 
-    /** @test */
-    public function it_extends_console_command()
-    {
-        $command = new SyncHubspotContacts;
+test('it extends console command', function () {
+    $command = new SyncHubspotContacts;
 
-        $this->assertInstanceOf(\Illuminate\Console\Command::class, $command);
-    }
-}
+    expect($command)->toBeInstanceOf(\Illuminate\Console\Command::class);
+});

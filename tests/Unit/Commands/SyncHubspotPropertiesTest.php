@@ -1,25 +1,27 @@
 <?php
 
-namespace Tapp\LaravelHubspot\Tests\Unit\Commands;
-
 use Tapp\LaravelHubspot\Commands\SyncHubspotProperties;
-use Tapp\LaravelHubspot\Tests\TestCase;
 
-class SyncHubspotPropertiesTest extends TestCase
-{
-    /** @test */
-    public function it_extends_console_command()
-    {
-        $command = new SyncHubspotProperties;
+test('it has correct signature', function () {
+    $command = new SyncHubspotProperties;
+    $reflection = new \ReflectionClass($command);
+    $signatureProperty = $reflection->getProperty('signature');
+    $signatureProperty->setAccessible(true);
 
-        $this->assertInstanceOf(\Illuminate\Console\Command::class, $command);
-    }
+    expect($signatureProperty->getValue($command))->toBe('hubspot:sync-properties {--model= : The model class to sync properties for}');
+});
 
-    /** @test */
-    public function it_has_correct_description()
-    {
-        $command = new SyncHubspotProperties;
+test('it has correct description', function () {
+    $command = new SyncHubspotProperties;
+    $reflection = new \ReflectionClass($command);
+    $descriptionProperty = $reflection->getProperty('description');
+    $descriptionProperty->setAccessible(true);
 
-        $this->assertNotEmpty($command->getDescription());
-    }
-}
+    expect($descriptionProperty->getValue($command))->toBe('Create missing hubspot contact properties.');
+});
+
+test('it extends console command', function () {
+    $command = new SyncHubspotProperties;
+
+    expect($command)->toBeInstanceOf(\Illuminate\Console\Command::class);
+});

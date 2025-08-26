@@ -1,11 +1,8 @@
 <?php
 
-namespace Tapp\LaravelHubspot\Tests\Unit\Observers;
-
 use Illuminate\Support\Facades\Queue;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotCompanyJob;
 use Tapp\LaravelHubspot\Observers\HubspotCompanyObserver;
-use Tapp\LaravelHubspot\Tests\TestCase;
 
 // Test model for observer tests
 class CompanyObserverTestModel extends \Illuminate\Database\Eloquent\Model
@@ -22,103 +19,85 @@ class CompanyObserverTestModel extends \Illuminate\Database\Eloquent\Model
     ];
 }
 
-class HubspotCompanyObserverTest extends TestCase
-{
-    protected HubspotCompanyObserver $observer;
+beforeEach(function () {
+    $this->observer = new HubspotCompanyObserver;
+    Queue::fake();
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->observer = new HubspotCompanyObserver;
-        Queue::fake();
-    }
+test('it extends base observer', function () {
+    expect($this->observer)->toBeInstanceOf(HubspotCompanyObserver::class);
+});
 
-    /** @test */
-    public function it_extends_base_observer()
-    {
-        $this->assertInstanceOf(HubspotCompanyObserver::class, $this->observer);
-    }
+test('it dispatches create job when model is created', function () {
+    config(['hubspot.queue.enabled' => true]);
 
-    /** @test */
-    public function it_dispatches_create_job_when_model_is_created()
-    {
-        config(['hubspot.queue.enabled' => true]);
+    $model = new CompanyObserverTestModel([
+        'id' => 1,
+        'name' => 'Test Company',
+        'domain' => 'test.com',
+    ]);
 
-        $model = new CompanyObserverTestModel([
-            'id' => 1,
-            'name' => 'Test Company',
-            'domain' => 'test.com',
-        ]);
+    $this->observer->created($model);
 
-        $this->observer->created($model);
+    Queue::assertPushed(SyncHubspotCompanyJob::class, function ($job) {
+        return $job->operation === 'create';
+    });
+});
 
-        Queue::assertPushed(SyncHubspotCompanyJob::class, function ($job) {
-            return $job->operation === 'create';
-        });
-    }
+test('it dispatches update job when model is updated', function () {
+    config(['hubspot.queue.enabled' => true]);
 
-    /** @test */
-    public function it_dispatches_update_job_when_model_is_updated()
-    {
-        config(['hubspot.queue.enabled' => true]);
+    $model = new CompanyObserverTestModel([
+        'id' => 1,
+        'name' => 'Test Company',
+        'domain' => 'test.com',
+    ]);
 
-        $model = new CompanyObserverTestModel([
-            'id' => 1,
-            'name' => 'Test Company',
-            'domain' => 'test.com',
-        ]);
+    $this->observer->updated($model);
 
-        $this->observer->updated($model);
+    // Test that the observer handles the update correctly
+    expect(true)->toBeTrue();
+});
 
-        // Test that the observer handles the update correctly
-        $this->assertTrue(true);
-    }
+test('it skips sync when hubspot is disabled', function () {
+    config(['hubspot.disabled' => true]);
 
-    /** @test */
-    public function it_skips_sync_when_hubspot_is_disabled()
-    {
-        config(['hubspot.disabled' => true]);
+    $model = new CompanyObserverTestModel([
+        'id' => 1,
+        'name' => 'Test Company',
+    ]);
 
-        $model = new CompanyObserverTestModel([
-            'id' => 1,
-            'name' => 'Test Company',
-        ]);
+    $this->observer->created($model);
 
-        $this->observer->created($model);
+    Queue::assertNotPushed(SyncHubspotCompanyJob::class);
+});
 
-        Queue::assertNotPushed(SyncHubspotCompanyJob::class);
-    }
+test('it skips sync when model has no hubspot map', function () {
+    config(['hubspot.disabled' => false]);
 
-    /** @test */
-    public function it_skips_sync_when_model_has_no_hubspot_map()
-    {
-        config(['hubspot.disabled' => false]);
+    $model = new CompanyObserverTestModel([
+        'id' => 1,
+        'name' => 'Test Company',
+    ]);
 
-        $model = new CompanyObserverTestModel([
-            'id' => 1,
-            'name' => 'Test Company',
-        ]);
-        $model->hubspotMap = []; // Empty map
+    // Remove the hubspot map
+    $model->hubspotMap = [];
 
-        $this->observer->created($model);
+    $this->observer->created($model);
 
-        Queue::assertNotPushed(SyncHubspotCompanyJob::class);
-    }
+    Queue::assertNotPushed(SyncHubspotCompanyJob::class);
+});
 
-    /** @test */
-    public function it_prepares_job_data_correctly()
-    {
-        config(['hubspot.queue.enabled' => true]);
+test('it skips sync when queue is disabled', function () {
+    config(['hubspot.queue.enabled' => false]);
 
-        $model = new CompanyObserverTestModel([
-            'id' => 1,
-            'name' => 'Test Company',
-            'domain' => 'test.com',
-        ]);
+    $model = new CompanyObserverTestModel([
+        'id' => 1,
+        'name' => 'Test Company',
+        'domain' => 'test.com',
+    ]);
 
-        $this->observer->created($model);
+    $this->observer->created($model);
 
-        // Test that the observer handles the model correctly
-        $this->assertTrue(true);
-    }
-}
+    Queue::assertNotPushed(SyncHubspotCompanyJob::class);
+});

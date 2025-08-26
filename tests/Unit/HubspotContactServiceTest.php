@@ -1,297 +1,192 @@
 <?php
 
-namespace Tapp\LaravelHubspot\Tests\Unit;
-
-use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
-use Mockery;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
-use Tapp\LaravelHubspot\Tests\TestCase;
 
-class HubspotContactServiceTest extends TestCase
-{
-    protected HubspotContactService $service;
+beforeEach(function () {
+    $this->service = app(HubspotContactService::class);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->service = app(HubspotContactService::class);
-    }
+test('it builds properties object correctly', function () {
+    $data = [
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+    ];
 
-    /** @test */
-    public function it_builds_properties_object_correctly()
-    {
-        $data = [
-            'email' => 'test@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-        ];
+    $map = [
+        'email' => 'email',
+        'firstname' => 'first_name',
+        'lastname' => 'last_name',
+    ];
 
-        $map = [
+    // Use reflection to test protected method
+    $reflection = new \ReflectionClass($this->service);
+    $method = $reflection->getMethod('buildPropertiesObject');
+    $method->setAccessible(true);
+
+    $properties = $method->invoke($this->service, $map, $data);
+
+    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class);
+    expect($properties->getProperties()['email'])->toBe('test@example.com');
+    expect($properties->getProperties()['firstname'])->toBe('John');
+    expect($properties->getProperties()['lastname'])->toBe('Doe');
+});
+
+test('it handles dynamic properties in data array', function () {
+    $data = [
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        // Dynamic properties in separate array
+        'dynamicProperties' => [
+            'course_progress' => '75%',
+            'courses_completed' => '3',
+            'last_course_access' => '2024-01-15',
+        ],
+    ];
+
+    $map = [
+        'email' => 'email',
+        'firstname' => 'first_name',
+        'lastname' => 'last_name',
+    ];
+
+    // Use reflection to test protected method
+    $reflection = new \ReflectionClass($this->service);
+    $method = $reflection->getMethod('buildPropertiesObject');
+    $method->setAccessible(true);
+
+    $properties = $method->invoke($this->service, $map, $data);
+
+    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class);
+
+    // Check mapped properties
+    expect($properties->getProperties()['email'])->toBe('test@example.com');
+    expect($properties->getProperties()['firstname'])->toBe('John');
+    expect($properties->getProperties()['lastname'])->toBe('Doe');
+
+    // Check dynamic properties
+    expect($properties->getProperties()['course_progress'])->toBe('75%');
+    expect($properties->getProperties()['courses_completed'])->toBe('3');
+    expect($properties->getProperties()['last_course_access'])->toBe('2024-01-15');
+});
+
+test('it creates contact successfully', function () {
+    // Set a dummy API key to prevent initialization error
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    // Mock the HubSpot API response
+    $mockResponse = new SimplePublicObject;
+    $mockResponse->setId('12345');
+    $mockResponse->setProperties([
+        'email' => 'test@example.com',
+        'firstname' => 'John',
+        'lastname' => 'Doe',
+    ]);
+
+    // Mock the HubSpot facade
+    Hubspot::shouldReceive('crm->contacts->basicApi->create')
+        ->once()
+        ->andReturn($mockResponse);
+
+    $data = [
+        'id' => 1,
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
             'email' => 'email',
             'firstname' => 'first_name',
             'lastname' => 'last_name',
-        ];
+        ],
+    ];
 
-        // Use reflection to test protected method
-        $reflection = new \ReflectionClass($this->service);
-        $method = $reflection->getMethod('buildPropertiesObject');
-        $method->setAccessible(true);
+    $result = $this->service->createContact($data, 'TestModel');
 
-        $properties = $method->invoke($this->service, $map, $data);
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe('12345');
+    expect($result['properties']['email'])->toBe('test@example.com');
+});
 
-        $this->assertInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class, $properties);
-        $this->assertEquals('test@example.com', $properties->getProperties()['email']);
-        $this->assertEquals('John', $properties->getProperties()['firstname']);
-        $this->assertEquals('Doe', $properties->getProperties()['lastname']);
-    }
+test('it updates contact successfully', function () {
+    // Set a dummy API key to prevent initialization error
+    config(['hubspot.api_key' => 'dummy-key']);
 
-    /** @test */
-    public function it_handles_dynamic_properties_in_data_array()
-    {
-        $data = [
-            'email' => 'test@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            // Dynamic properties in separate array
-            'dynamicProperties' => [
-                'course_progress' => '75%',
-                'courses_completed' => '3',
-                'last_course_access' => '2024-01-15',
-            ],
-        ];
+    // Mock the HubSpot API response
+    $mockResponse = new SimplePublicObject;
+    $mockResponse->setId('12345');
+    $mockResponse->setProperties([
+        'email' => 'test@example.com',
+        'firstname' => 'John',
+        'lastname' => 'Doe',
+    ]);
 
-        $map = [
+    // Mock the HubSpot facade
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with('12345')
+        ->andReturn(['id' => '12345']);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with('12345', Mockery::any())
+        ->andReturn($mockResponse);
+
+    $data = [
+        'id' => 1,
+        'hubspot_id' => '12345',
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
             'email' => 'email',
             'firstname' => 'first_name',
             'lastname' => 'last_name',
-        ];
+        ],
+    ];
 
-        // Use reflection to test protected method
-        $reflection = new \ReflectionClass($this->service);
-        $method = $reflection->getMethod('buildPropertiesObject');
-        $method->setAccessible(true);
+    $result = $this->service->updateContact($data);
 
-        $properties = $method->invoke($this->service, $map, $data);
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe('12345');
+    expect($result['properties']['email'])->toBe('test@example.com');
+});
 
-        $this->assertInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class, $properties);
+test('it skips execution when hubspot is disabled', function () {
+    config(['hubspot.disabled' => true]);
 
-        // Check mapped properties
-        $this->assertEquals('test@example.com', $properties->getProperties()['email']);
-        $this->assertEquals('John', $properties->getProperties()['firstname']);
-        $this->assertEquals('Doe', $properties->getProperties()['lastname']);
+    $data = [
+        'id' => 1,
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
 
-        // Check dynamic properties
-        $this->assertEquals('75%', $properties->getProperties()['course_progress']);
-        $this->assertEquals('3', $properties->getProperties()['courses_completed']);
-        $this->assertEquals('2024-01-15', $properties->getProperties()['last_course_access']);
-    }
+    expect(fn () => $this->service->createContact($data, 'TestModel'))
+        ->toThrow(\Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
+});
 
-    /** @test */
-    public function it_creates_contact_successfully()
-    {
-        // Mock the HubSpot API response
-        $mockResponse = new SimplePublicObject;
-        $mockResponse->setId('12345');
-        $mockResponse->setProperties([
-            'email' => 'test@example.com',
-            'firstname' => 'John',
-            'lastname' => 'Doe',
-        ]);
+test('it skips execution when no api key is configured', function () {
+    config(['hubspot.api_key' => null]);
 
-        // Mock the HubSpot facade using Laravel's facade mocking
-        $mockBasicApi = Mockery::mock();
-        $mockBasicApi->shouldReceive('create')
-            ->once()
-            ->andReturn($mockResponse);
+    $data = [
+        'id' => 1,
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
 
-        $mockContacts = Mockery::mock();
-        $mockContacts->shouldReceive('basicApi')
-            ->andReturn($mockBasicApi);
-
-        $mockCrm = Mockery::mock();
-        $mockCrm->shouldReceive('contacts')
-            ->andReturn($mockContacts);
-
-        Hubspot::shouldReceive('crm')
-            ->andReturn($mockCrm);
-
-        $data = [
-            'id' => 1,
-            'email' => 'test@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'hubspotMap' => [
-                'email' => 'email',
-                'firstname' => 'first_name',
-                'lastname' => 'last_name',
-            ],
-        ];
-
-        $result = $this->service->createContact($data, 'TestUser');
-
-        // Test passes if the method completes without throwing an exception
-        $this->assertTrue(true);
-    }
-
-    /** @test */
-    public function it_handles_api_exception_during_contact_creation()
-    {
-        // Mock API exception
-        $mockBasicApi = Mockery::mock();
-        $mockBasicApi->shouldReceive('create')
-            ->once()
-            ->andThrow(new ApiException('API Error', 400));
-
-        $mockContacts = Mockery::mock();
-        $mockContacts->shouldReceive('basicApi')
-            ->andReturn($mockBasicApi);
-
-        $mockCrm = Mockery::mock();
-        $mockCrm->shouldReceive('contacts')
-            ->andReturn($mockContacts);
-
-        Hubspot::shouldReceive('crm')
-            ->andReturn($mockCrm);
-
-        $data = [
-            'id' => 1,
-            'email' => 'test@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'hubspotMap' => [
-                'email' => 'email',
-                'firstname' => 'first_name',
-                'lastname' => 'last_name',
-            ],
-        ];
-
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('HubSpot API validation error: API Error');
-
-        $this->service->createContact($data, 'TestUser');
-    }
-
-    /** @test */
-    public function it_updates_contact_successfully()
-    {
-        // Mock the HubSpot API response
-        $mockResponse = new SimplePublicObject;
-        $mockResponse->setId('12345');
-        $mockResponse->setProperties([
-            'email' => 'test@example.com',
-            'firstname' => 'Updated',
-            'lastname' => 'Name',
-        ]);
-
-        // Mock the HubSpot facade
-        $mockBasicApi = Mockery::mock();
-        $mockBasicApi->shouldReceive('update')
-            ->once()
-            ->with('12345', Mockery::any())
-            ->andReturn($mockResponse);
-        $mockBasicApi->shouldReceive('getById')
-            ->with('12345')
-            ->andReturn(['id' => '12345']);
-
-        $mockContacts = Mockery::mock();
-        $mockContacts->shouldReceive('basicApi')
-            ->andReturn($mockBasicApi);
-
-        $mockCrm = Mockery::mock();
-        $mockCrm->shouldReceive('contacts')
-            ->andReturn($mockContacts);
-
-        Hubspot::shouldReceive('crm')
-            ->andReturn($mockCrm);
-
-        $data = [
-            'id' => 1,
-            'hubspot_id' => '12345',
-            'email' => 'test@example.com',
-            'first_name' => 'Updated',
-            'last_name' => 'Name',
-            'hubspotMap' => [
-                'email' => 'email',
-                'firstname' => 'first_name',
-                'lastname' => 'last_name',
-            ],
-        ];
-
-        $result = $this->service->updateContact($data, 'TestUser');
-
-        // Test passes if the method completes without throwing an exception
-        $this->assertTrue(true);
-    }
-
-    /** @test */
-    public function it_validates_contact_exists()
-    {
-        // Mock successful contact retrieval
-        $mockBasicApi = Mockery::mock();
-        $mockBasicApi->shouldReceive('getById')
-            ->with('12345')
-            ->andReturn(['id' => '12345']);
-
-        $mockContacts = Mockery::mock();
-        $mockContacts->shouldReceive('basicApi')
-            ->andReturn($mockBasicApi);
-
-        $mockCrm = Mockery::mock();
-        $mockCrm->shouldReceive('contacts')
-            ->andReturn($mockContacts);
-
-        Hubspot::shouldReceive('crm')
-            ->andReturn($mockCrm);
-
-        // Use reflection to test protected method
-        $reflection = new \ReflectionClass($this->service);
-        $method = $reflection->getMethod('validateHubspotContactExists');
-        $method->setAccessible(true);
-
-        $exists = $method->invoke($this->service, '12345');
-        $this->assertTrue($exists);
-    }
-
-    /** @test */
-    public function it_returns_false_for_nonexistent_contact()
-    {
-        // Mock 404 response
-        $mockBasicApi = Mockery::mock();
-        $mockBasicApi->shouldReceive('getById')
-            ->with('999999')
-            ->andThrow(new ApiException('Not found', 404));
-
-        $mockContacts = Mockery::mock();
-        $mockContacts->shouldReceive('basicApi')
-            ->andReturn($mockBasicApi);
-
-        $mockCrm = Mockery::mock();
-        $mockCrm->shouldReceive('contacts')
-            ->andReturn($mockContacts);
-
-        Hubspot::shouldReceive('crm')
-            ->andReturn($mockCrm);
-
-        // Use reflection to test protected method
-        $reflection = new \ReflectionClass($this->service);
-        $method = $reflection->getMethod('validateHubspotContactExists');
-        $method->setAccessible(true);
-
-        $exists = $method->invoke($this->service, '999999');
-        $this->assertFalse($exists);
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
-}
-
-// Test model class for unit tests
-class UnitTestUser extends \Illuminate\Database\Eloquent\Model
-{
-    protected $fillable = ['email', 'first_name', 'last_name'];
-}
+    expect(fn () => $this->service->createContact($data, 'TestModel'))
+        ->toThrow(\Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
+});

@@ -36,6 +36,17 @@ class LaravelHubspotServiceProvider extends PackageServiceProvider
     public function bootingPackage()
     {
         $this->app->bind(LaravelHubspot::class, function ($app) {
+            // Only initialize HubSpot client if API key is provided and not disabled
+            if (! config('hubspot.api_key') || config('hubspot.disabled')) {
+                // Return a mock object that throws an exception when used
+                return new class
+                {
+                    public function crm()
+                    {
+                        throw new \Exception('HubSpot client not initialized. Please check your API key configuration.');
+                    }
+                };
+            }
 
             $stack = new HandlerStack;
             $stack->setHandler(Utils::chooseHandler());
