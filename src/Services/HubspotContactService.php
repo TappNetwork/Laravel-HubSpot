@@ -7,6 +7,7 @@ use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
+use Tapp\LaravelHubspot\Services\PropertyConverter;
 
 class HubspotContactService
 {
@@ -294,70 +295,7 @@ class HubspotContactService
         return (array) $contact;
     }
 
-    /**
-     * Validate that all properties are properly converted to strings for HubSpot API
-     */
-    protected function validateHubspotProperties(array $properties): void
-    {
-        $invalidProperties = [];
 
-        foreach ($properties as $key => $value) {
-            if (! is_string($value)) {
-                $invalidProperties[$key] = [
-                    'value' => $value,
-                    'type' => gettype($value),
-                    'class' => is_object($value) ? get_class($value) : null,
-                ];
-            }
-        }
-
-        if (! empty($invalidProperties)) {
-            throw new \InvalidArgumentException(
-                'HubSpot properties must be strings after automatic conversion. Invalid properties found: '.
-                json_encode($invalidProperties, JSON_PRETTY_PRINT).
-                '. This indicates a data type that could not be automatically converted. Please ensure all properties are convertible to strings.'
-            );
-        }
-    }
-
-    /**
-     * Convert a value to a string suitable for HubSpot API
-     */
-    protected function convertValueForHubspot($value, string $propertyName)
-    {
-        if (is_null($value)) {
-            return null;
-        } elseif ($value instanceof \Carbon\Carbon) {
-            return $value->toISOString();
-        } elseif (is_array($value)) {
-            if (empty($value)) {
-                return null;
-            }
-
-            return (array_keys($value) === range(0, count($value) - 1))
-                ? implode(', ', array_filter($value, 'is_scalar'))
-                : json_encode($value);
-        } elseif (is_object($value)) {
-            if (method_exists($value, '__toString')) {
-                return (string) $value;
-            } elseif (method_exists($value, 'toArray')) {
-                $arrayValue = $value->toArray();
-
-                return is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
-            } else {
-                throw new \InvalidArgumentException(
-                    'Cannot convert object of type '.get_class($value)." to string for property: {$propertyName}. ".
-                    'Objects must implement __toString() or toArray() methods to be automatically converted.'
-                );
-            }
-        } elseif (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        } elseif (is_numeric($value)) {
-            return (string) $value;
-        } else {
-            return (string) $value;
-        }
-    }
 
     /**
      * Build HubSpot properties array for logging purposes.
@@ -368,10 +306,10 @@ class HubspotContactService
 
         // Process mapped properties
         foreach ($map as $hubspotProperty => $modelProperty) {
-            $value = $this->getNestedValue($data, $modelProperty);
+            $value = PropertyConverter::getNestedValue($data, $modelProperty);
 
             if ($value !== null) {
-                $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
                 }
@@ -386,7 +324,7 @@ class HubspotContactService
                 if (array_key_exists($hubspotProperty, $map)) {
                     // Only add if it wasn't already processed above
                     if (! array_key_exists($hubspotProperty, $properties)) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -394,7 +332,7 @@ class HubspotContactService
                 } else {
                     // Convert and add dynamic property
                     if ($value !== null) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -415,10 +353,10 @@ class HubspotContactService
 
         // Process mapped properties
         foreach ($map as $hubspotProperty => $modelProperty) {
-            $value = $this->getNestedValue($data, $modelProperty);
+            $value = PropertyConverter::getNestedValue($data, $modelProperty);
 
             if ($value !== null) {
-                $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
                 }
@@ -433,7 +371,7 @@ class HubspotContactService
                 if (array_key_exists($hubspotProperty, $map)) {
                     // Only add if it wasn't already processed above
                     if (! array_key_exists($hubspotProperty, $properties)) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -441,7 +379,7 @@ class HubspotContactService
                 } else {
                     // Convert and add dynamic property
                     if ($value !== null) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -451,18 +389,11 @@ class HubspotContactService
         }
 
         // Validate all properties are strings before creating the object
-        $this->validateHubspotProperties($properties);
+        PropertyConverter::validateHubspotProperties($properties);
 
         return new ContactObject(['properties' => $properties]);
     }
 
-    /**
-     * Get nested value from array using dot notation.
-     */
-    protected function getNestedValue(array $array, string $key)
-    {
-        return data_get($array, $key);
-    }
 
     /**
      * Update the model with HubSpot ID.

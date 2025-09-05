@@ -3,7 +3,7 @@
 namespace Tapp\LaravelHubspot\Commands;
 
 use Illuminate\Console\Command;
-use Tapp\LaravelHubspot\Models\HubspotContact;
+use Tapp\LaravelHubspot\Services\HubspotContactService;
 
 class SyncHubspotContacts extends Command
 {
@@ -65,10 +65,20 @@ class SyncHubspotContacts extends Command
         $successCount = 0;
         $errorCount = 0;
 
+        $service = app(HubspotContactService::class);
+
         // Process contacts
         foreach ($contacts as $contact) {
             try {
-                HubspotContact::updateOrCreateHubspotContact($contact);
+                // Prepare data for the service
+                $data = $this->prepareContactData($contact);
+                
+                if ($contact->hubspot_id) {
+                    $service->updateContact($data);
+                } else {
+                    $service->createContact($data, get_class($contact));
+                }
+                
                 $successCount++;
                 $progressBar->advance();
             } catch (\Exception $e) {
@@ -101,5 +111,47 @@ class SyncHubspotContacts extends Command
         $this->info('HubSpot contact sync completed!');
 
         return $errorCount === 0 ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    /**
+     * Prepare contact data for the service.
+     */
+    protected function prepareContactData($contact): array
+    {
+        $data = $contact->toArray();
+        
+        // Add HubSpot-specific properties
+        $data['hubspotMap'] = $contact->hubspotMap ?? [];
+        $data['hubspotUpdateMap'] = $contact->hubspotUpdateMap ?? [];
+        $data['hubspotCompanyRelation'] = $contact->hubspotCompanyRelation ?? '';
+
+        // Include dynamic properties from overridden hubspotProperties method
+        if (method_exists($contact, 'hubspotProperties')) {
+            $dynamicProperties = $contact->hubspotProperties($contact->hubspotMap ?? []);
+            if (! empty($dynamicProperties)) {
+                $data['dynamicProperties'] = [];
+
+                foreach ($dynamicProperties as $hubspotField => $value) {
+                    // Only add if not already included as a mapped field
+                    if (! in_array($hubspotField, array_values($contact->hubspotMap ?? []))) {
+                        $data['dynamicProperties'][$hubspotField] = $value;
+                    }
+                }
+            }
+        }
+
+        // Include company relation data if it exists
+        if (! empty($contact->hubspotCompanyRelation)) {
+            $company = $contact->getRelationValue($contact->hubspotCompanyRelation);
+            if ($company) {
+                $data['hubspotCompanyRelation'] = [
+                    'id' => $company->getKey(),
+                    'hubspot_id' => $company->hubspot_id ?? null,
+                    'name' => $company->name ?? $company->getAttribute('name'),
+                ];
+            }
+        }
+
+        return $data;
     }
 }
