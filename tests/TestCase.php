@@ -22,6 +22,14 @@ class TestCase extends Orchestra
         );
     }
 
+    protected function tearDown(): void
+    {
+        // Clean up Mockery expectations to prevent test interference
+        \Mockery::close();
+
+        parent::tearDown();
+    }
+
     protected function getPackageProviders($app)
     {
         return [
