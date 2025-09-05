@@ -1,12 +1,6 @@
 name: PHPStan
 
 on:
-  push:
-    branches: [ main, v2-cleanup, queue ]
-    paths:
-      - '**.php'
-      - 'phpstan.neon.dist'
-      - '.github/workflows/phpstan.yml'
   pull_request:
     branches: [ main, v2-cleanup ]
     paths:
