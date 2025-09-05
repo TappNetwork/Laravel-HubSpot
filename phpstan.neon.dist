@@ -10,7 +10,3 @@ parameters:
     tmpDir: build/phpstan
     checkOctaneCompatibility: true
     checkModelProperties: true
-    ignoreErrors:
-        - '#Called .env. outside of the config directory#'
-        - '#Trait .+ is used zero times and is not analysed#'
-        - '#Call to function is_object\(\) with .+ will always evaluate to true#'
