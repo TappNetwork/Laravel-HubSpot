@@ -28,7 +28,7 @@ test('it builds properties object correctly', function () {
 
     $properties = $method->invoke($this->service, $map, $data);
 
-    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class);
+    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate::class);
     expect($properties->getProperties()['email'])->toBe('test@example.com');
     expect($properties->getProperties()['firstname'])->toBe('John');
     expect($properties->getProperties()['lastname'])->toBe('Doe');
@@ -60,7 +60,7 @@ test('it handles dynamic properties in data array', function () {
 
     $properties = $method->invoke($this->service, $map, $data);
 
-    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput::class);
+    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate::class);
 
     // Check mapped properties
     expect($properties->getProperties()['email'])->toBe('test@example.com');

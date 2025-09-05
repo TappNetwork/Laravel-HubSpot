@@ -10,5 +10,3 @@ parameters:
     tmpDir: build/phpstan
     checkOctaneCompatibility: true
     checkModelProperties: true
-    ignoreErrors:
-        - '#Trait .+ is used zero times and is not analysed#'

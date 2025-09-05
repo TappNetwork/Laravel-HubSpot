@@ -3,7 +3,8 @@
 namespace Tapp\LaravelHubspot\Services;
 
 use HubSpot\Client\Crm\Contacts\ApiException;
-use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactCreateObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactUpdateObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
@@ -26,21 +27,17 @@ class HubspotContactService
             }
 
             // Update the model with HubSpot ID
-            $contactId = is_array($hubspotContact) ? $hubspotContact['id'] : $hubspotContact->getId();
+            $contactId = $hubspotContact->getId();
             $this->updateModelHubspotId($data['id'] ?? null, $contactId, $modelClass);
 
             // Handle company association
             $this->associateCompanyIfNeeded($contactId, $data);
 
             // Convert SimplePublicObject to array for consistency
-            if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject) {
-                return [
-                    'id' => $hubspotContact->getId(),
-                    'properties' => $hubspotContact->getProperties() ?? [],
-                ];
-            }
-
-            return $hubspotContact;
+            return [
+                'id' => $hubspotContact->getId(),
+                'properties' => $hubspotContact->getProperties() ?? [],
+            ];
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate email) by finding existing contact
             $emailField = $this->getMappedEmailField($data);
@@ -141,7 +138,7 @@ class HubspotContactService
 
         // Use hubspotUpdateMap if defined and not empty, otherwise default to hubspotMap
         $map = (! empty($data['hubspotUpdateMap'])) ? $data['hubspotUpdateMap'] : ($data['hubspotMap'] ?? []);
-        $properties = $this->buildPropertiesObject($map, $data);
+        $properties = $this->buildUpdatePropertiesObject($map, $data);
 
         // Log the properties being sent for debugging
         $propertiesArray = $this->buildPropertiesArray($map, $data);
@@ -181,15 +178,10 @@ class HubspotContactService
         $this->associateCompanyIfNeeded($data['hubspot_id'], $data);
 
         // Convert SimplePublicObject to array for consistency
-        if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject) {
-            /** @var \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject $hubspotContact */
-            return [
-                'id' => $hubspotContact->getId(),
-                'properties' => $hubspotContact->getProperties() ?? [],
-            ];
-        }
-
-        return $hubspotContact;
+        return [
+            'id' => $hubspotContact->getId(),
+            'properties' => $hubspotContact->getProperties() ?? [],
+        ];
     }
 
     /**
@@ -249,7 +241,7 @@ class HubspotContactService
                 }
 
                 // Update the model with HubSpot ID
-                $contactId = is_array($contact) ? $contact['id'] : $contact->getId();
+                $contactId = $contact->getId();
                 $this->updateModelHubspotId($data['id'] ?? null, $contactId, $data['modelClass'] ?? null);
 
                 return $this->normalizeContactResponse($contact);
@@ -268,15 +260,6 @@ class HubspotContactService
      */
     protected function normalizeContactResponse($contact): array
     {
-        // Convert SimplePublicObject to array for consistency
-        if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations) {
-            /** @var \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations $contact */
-            return [
-                'id' => $contact->getId(),
-                'properties' => $contact->getProperties() ?? [],
-            ];
-        }
-
         // If it's already an array, return it
         if (is_array($contact)) {
             return $contact;
@@ -344,7 +327,7 @@ class HubspotContactService
     /**
      * Build HubSpot properties object from data.
      */
-    protected function buildPropertiesObject(array $map, array $data): ContactObject
+    protected function buildPropertiesObject(array $map, array $data): ContactCreateObject
     {
         $properties = [];
 
@@ -388,7 +371,39 @@ class HubspotContactService
         // Validate all properties are strings before creating the object
         PropertyConverter::validateHubspotProperties($properties);
 
-        return new ContactObject(['properties' => $properties]);
+        return new ContactCreateObject(['properties' => $properties]);
+    }
+
+    /**
+     * Build HubSpot properties object for update operations.
+     */
+    protected function buildUpdatePropertiesObject(array $map, array $data): ContactUpdateObject
+    {
+        $properties = [];
+
+        // Process mapped properties
+        foreach ($map as $hubspotProperty => $modelProperty) {
+            $value = PropertyConverter::getNestedValue($data, $modelProperty);
+
+            if ($value !== null) {
+                $properties[$hubspotProperty] = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
+            }
+        }
+
+        // Process dynamic properties that are explicitly added by hubspotProperties method
+        if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
+            foreach ($data['dynamicProperties'] as $hubspotProperty => $value) {
+                // If this property is in the map but wasn't found above, use the dynamic property
+                if (! isset($properties[$hubspotProperty]) && $value !== null) {
+                    $properties[$hubspotProperty] = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
+                }
+            }
+        }
+
+        // Validate all properties are strings before creating the object
+        PropertyConverter::validateHubspotProperties($properties);
+
+        return new ContactUpdateObject(['properties' => $properties]);
     }
 
     /**

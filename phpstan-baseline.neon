@@ -2,5 +2,5 @@ parameters:
 	ignoreErrors:
 		-
 			message: "#^Expression on left side of \\?\\? is not nullable\\.$#"
-			count: 3
+			count: 2
 			path: src/Services/HubspotContactService.php

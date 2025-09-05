@@ -2,7 +2,7 @@
 
 namespace Tapp\LaravelHubspot\Models;
 
-use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactObject;
 use Tapp\LaravelHubspot\Services\PropertyConverter;
 
 trait HubspotContact

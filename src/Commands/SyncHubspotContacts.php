@@ -74,7 +74,7 @@ class SyncHubspotContacts extends Command
                 // Prepare data for the service
                 $data = $this->prepareContactData($contact);
 
-                if ($contact->hubspot_id) {
+                if ($contact->getAttribute('hubspot_id')) {
                     $service->updateContact($data);
                 } else {
                     $service->createContact($data, get_class($contact));
@@ -85,7 +85,7 @@ class SyncHubspotContacts extends Command
             } catch (\Exception $e) {
                 $errorCount++;
                 $this->newLine();
-                $this->error("Failed to sync contact {$contact->email}: ".$e->getMessage());
+                $this->error("Failed to sync contact {$contact->getAttribute('email')}: ".$e->getMessage());
                 $progressBar->advance();
             }
 
@@ -147,7 +147,7 @@ class SyncHubspotContacts extends Command
             if ($company) {
                 $data['hubspotCompanyRelation'] = [
                     'id' => $company->getKey(),
-                    'hubspot_id' => $company->hubspot_id ?? null,
+                    'hubspot_id' => $company->getAttribute('hubspot_id') ?? null,
                     'name' => $company->name ?? $company->getAttribute('name'),
                 ];
             }

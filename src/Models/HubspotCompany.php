@@ -2,7 +2,7 @@
 
 namespace Tapp\LaravelHubspot\Models;
 
-use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyObject;
+use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate as CompanyObject;
 use Tapp\LaravelHubspot\Services\PropertyConverter;
 
 trait HubspotCompany
