@@ -36,6 +36,7 @@ class SyncHubspotContacts extends Command
      */
     public function handle(): int
     {
+        /** @var class-string<\Illuminate\Database\Eloquent\Model> $contactModel */
         $contactModel = $this->argument('model');
         $delay = (int) $this->option('delay');
         $limit = $this->option('limit');

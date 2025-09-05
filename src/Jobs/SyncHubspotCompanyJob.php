@@ -92,7 +92,7 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
     {
         // If it's an Error object, throw an exception
         if (is_object($company) && get_class($company) === 'HubSpot\Client\Crm\Companies\Model\Error') {
-            throw new \Exception('HubSpot API returned an error: '.(method_exists($company, 'getMessage') ? $company->getMessage() : 'Unknown error'));
+            throw new \Exception('HubSpot API returned an error: '.$company->getMessage());
         }
 
         return $this->extractId($company);

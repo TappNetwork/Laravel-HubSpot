@@ -482,7 +482,7 @@ class HubspotContactService
                     'hubspot_id' => $companyData['hubspot_id'],
                     'contact_id' => $contactId,
                     'error' => $e->getMessage(),
-                    'error_code' => method_exists($e, 'getCode') ? $e->getCode() : 'unknown',
+                    'error_code' => $e->getCode(),
                 ]);
                 throw $e;
             }

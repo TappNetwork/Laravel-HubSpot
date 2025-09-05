@@ -25,6 +25,7 @@ class DebugHubspotData extends Command
      */
     public function handle(): int
     {
+        /** @var class-string<\Illuminate\Database\Eloquent\Model> $contactModel */
         $contactModel = $this->argument('model');
         $email = $this->option('email');
 
