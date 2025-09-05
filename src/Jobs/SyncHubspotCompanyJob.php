@@ -3,8 +3,8 @@
 namespace Tapp\LaravelHubspot\Jobs;
 
 use HubSpot\Client\Crm\Companies\ApiException;
-use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate as CompanyCreateObject;
 use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyUpdateObject;
+use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate as CompanyCreateObject;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 use Tapp\LaravelHubspot\Services\PropertyConverter;

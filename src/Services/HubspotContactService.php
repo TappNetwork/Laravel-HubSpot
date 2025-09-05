@@ -3,8 +3,8 @@
 namespace Tapp\LaravelHubspot\Services;
 
 use HubSpot\Client\Crm\Contacts\ApiException;
-use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactCreateObject;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactUpdateObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactCreateObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
