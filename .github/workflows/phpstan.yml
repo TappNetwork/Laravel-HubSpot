@@ -2,6 +2,13 @@ name: PHPStan
 
 on:
   push:
+    branches: [ main, v2-cleanup, queue ]
+    paths:
+      - '**.php'
+      - 'phpstan.neon.dist'
+      - '.github/workflows/phpstan.yml'
+  pull_request:
+    branches: [ main, v2-cleanup ]
     paths:
       - '**.php'
       - 'phpstan.neon.dist'
@@ -23,6 +30,9 @@ jobs:
 
       - name: Install composer dependencies
         uses: ramsey/composer-install@v3
+
+      - name: Clear PHPStan cache
+        run: ./vendor/bin/phpstan clear-cache
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan --error-format=github --configuration=phpstan.neon.dist
