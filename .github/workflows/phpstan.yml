@@ -31,8 +31,5 @@ jobs:
       - name: Install composer dependencies
         uses: ramsey/composer-install@v3
 
-      - name: Clear PHPStan cache
-        run: ./vendor/bin/phpstan clear-cache
-
       - name: Run PHPStan
         run: ./vendor/bin/phpstan --error-format=github --configuration=phpstan.neon.dist
