@@ -43,13 +43,14 @@ class HubspotContactService
             return $hubspotContact;
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate email) by finding existing contact
-            if ($e->getCode() === 409 && ! empty($data['email'])) {
+            $emailField = $this->getMappedEmailField($data);
+            if ($e->getCode() === 409 && $emailField) {
                 Log::info('HubSpot contact already exists, finding by email', [
-                    'email' => $data['email'],
+                    'email' => $emailField,
                     'error' => $e->getMessage(),
                 ]);
 
-                $contact = $this->findContact(['email' => $data['email']]);
+                $contact = $this->findContact($data);
                 if ($contact && isset($contact['id'])) {
                     // Update the model with existing HubSpot ID
                     $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
@@ -81,13 +82,14 @@ class HubspotContactService
             throw $e;
         } catch (\Exception $e) {
             // Handle "Contact already exists" error that might not be an ApiException
-            if (str_contains($e->getMessage(), 'Contact already exists') && ! empty($data['email'])) {
+            $emailField = $this->getMappedEmailField($data);
+            if (str_contains($e->getMessage(), 'Contact already exists') && $emailField) {
                 Log::info('HubSpot contact already exists, finding by email', [
-                    'email' => $data['email'],
+                    'email' => $emailField,
                     'error' => $e->getMessage(),
                 ]);
 
-                $contact = $this->findContact(['email' => $data['email']]);
+                $contact = $this->findContact($data);
                 if ($contact && isset($contact['id'])) {
                     // Update the model with existing HubSpot ID
                     $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
@@ -120,8 +122,9 @@ class HubspotContactService
         // Validate that the contact exists in HubSpot before attempting update
         if (! $this->validateHubspotContactExists($data['hubspot_id'])) {
             // Try to find by email without clearing the invalid ID
-            if (! empty($data['email'])) {
-                $contact = $this->findContact(['email' => $data['email']]);
+            $emailField = $this->getMappedEmailField($data);
+            if ($emailField) {
+                $contact = $this->findContact($data);
                 if ($contact) {
                     // Update with correct hubspot_id and retry
                     $contactId = $contact['id'];
@@ -234,9 +237,11 @@ class HubspotContactService
             }
         }
 
-        if (! empty($data['email'])) {
+        // Use the mapped email field from hubspotMap instead of data['email'] directly
+        $emailField = $this->getMappedEmailField($data);
+        if ($emailField) {
             try {
-                $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['email'], null, null, null, false, 'email');
+                $contact = Hubspot::crm()->contacts()->basicApi()->getById($emailField, null, null, null, false, 'email');
 
                 // Check if response is an Error object
                 if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
@@ -555,6 +560,27 @@ class HubspotContactService
                 throw $e;
             }
         }
+    }
+
+    /**
+     * Get the mapped email field from the data's hubspotMap
+     */
+    protected function getMappedEmailField(array $data): ?string
+    {
+        // Check if hubspotMap exists and has an email mapping
+        if (isset($data['hubspotMap']['email'])) {
+            $emailField = $data['hubspotMap']['email'];
+
+            // Handle dot notation for nested properties
+            if (strpos($emailField, '.')) {
+                return data_get($data, $emailField);
+            }
+
+            return $data[$emailField] ?? null;
+        }
+
+        // Fallback to data['email'] if no mapping is defined
+        return $data['email'] ?? null;
     }
 
     /**

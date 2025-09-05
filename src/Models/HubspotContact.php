@@ -112,6 +112,31 @@ trait HubspotContact
 
             $model->hubspot_id = $hubspotContact['id'];
         } catch (ApiException $e) {
+            // Handle "Contact already exists" error gracefully
+            if (strpos($e->getMessage(), 'Contact already exists') !== false) {
+                // Extract the existing contact ID from the error message
+                if (preg_match('/Existing ID: (\d+)/', $e->getMessage(), $matches)) {
+                    $existingId = $matches[1];
+                    $model->hubspot_id = $existingId;
+                    static::saveHubspotId($model, $existingId);
+
+                    // Return the existing contact data
+                    return ['id' => $existingId];
+                }
+
+                // If we can't extract the ID, try to find the contact by email
+                $emailField = static::getMappedEmailField($model);
+                if ($emailField) {
+                    $existingContact = static::findContactByEmail($emailField);
+                    if ($existingContact) {
+                        $model->hubspot_id = $existingContact['id'];
+                        static::saveHubspotId($model, $existingContact['id']);
+                        return $existingContact;
+                    }
+                }
+            }
+
+            // Re-throw other errors
             throw $e;
         }
 
@@ -145,8 +170,9 @@ trait HubspotContact
         // Validate that the contact exists in HubSpot before attempting update
         if (! static::validateHubspotContactExists($model->hubspot_id)) {
             // Try to find by email without clearing the invalid ID
-            if ($model->email) {
-                $contact = static::findContactByEmail($model->email);
+            $emailField = static::getMappedEmailField($model);
+            if ($emailField) {
+                $contact = static::findContactByEmail($emailField);
                 if ($contact) {
                     // Update with correct hubspot_id and retry
                     static::saveHubspotId($model, $contact['id']);
@@ -156,7 +182,7 @@ trait HubspotContact
                     return static::createHubspotContact($model);
                 }
             } else {
-                throw new \Exception('Invalid HubSpot ID and no email provided for contact: '.$model->email);
+                throw new \Exception('Invalid HubSpot ID and no email provided for contact: '.($model->email ?? 'unknown'));
             }
         }
 
@@ -204,13 +230,18 @@ trait HubspotContact
         }
 
         // if no hubspot id or if id fetch failed, try fetching by email
-        if ($model->email) {
+        // Use the mapped email field from hubspotMap instead of model->email directly
+        $emailField = static::getMappedEmailField($model);
+        if ($emailField) {
             try {
-                $hubspotContact = Hubspot::crm()->contacts()->basicApi()->getById($model->email, null, null, null, false, 'email');
+                $hubspotContact = Hubspot::crm()->contacts()->basicApi()->getById($emailField, null, null, null, false, 'email');
 
                 // Update the hubspot_id and save it to prevent future 404s
                 $model->hubspot_id = $hubspotContact['id'];
                 static::saveHubspotId($model, $hubspotContact['id']);
+
+                // Refresh the model to ensure the hubspot_id is updated in memory
+                $model->refresh();
             } catch (ApiException $e) {
                 // Contact not found by email either, return null
                 if ($e->getCode() !== 404) {
@@ -242,6 +273,27 @@ trait HubspotContact
             }
             throw $e;
         }
+    }
+
+    /**
+     * Get the mapped email field from the model's hubspotMap
+     */
+    protected static function getMappedEmailField($model): ?string
+    {
+        // Check if hubspotMap exists and has an email mapping
+        if (property_exists($model, 'hubspotMap') && isset($model->hubspotMap['email'])) {
+            $emailField = $model->hubspotMap['email'];
+
+            // Handle dot notation for nested properties
+            if (strpos($emailField, '.')) {
+                return data_get($model, $emailField);
+            }
+
+            return $model->$emailField;
+        }
+
+        // Fallback to model->email if no mapping is defined
+        return $model->email ?? null;
     }
 
     /**
