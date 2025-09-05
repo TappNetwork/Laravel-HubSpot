@@ -116,7 +116,7 @@ class SyncHubspotContacts extends Command
     /**
      * Prepare contact data for the service.
      */
-    protected function prepareContactData($contact): array
+    protected function prepareContactData(\Illuminate\Database\Eloquent\Model $contact): array
     {
         $data = $contact->toArray();
 
