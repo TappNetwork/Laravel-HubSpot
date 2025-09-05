@@ -7,7 +7,6 @@ use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
-use Tapp\LaravelHubspot\Services\PropertyConverter;
 
 class HubspotContactService
 {
@@ -295,8 +294,6 @@ class HubspotContactService
         return (array) $contact;
     }
 
-
-
     /**
      * Build HubSpot properties array for logging purposes.
      */
@@ -393,7 +390,6 @@ class HubspotContactService
 
         return new ContactObject(['properties' => $properties]);
     }
-
 
     /**
      * Update the model with HubSpot ID.

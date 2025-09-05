@@ -8,7 +8,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Tapp\LaravelHubspot\Services\PropertyConverter;
 
 abstract class BaseHubspotJob implements ShouldQueue
 {
@@ -144,7 +143,4 @@ abstract class BaseHubspotJob implements ShouldQueue
 
         throw new \Exception('Unable to extract ID from response');
     }
-
-
-
 }

@@ -72,13 +72,13 @@ class SyncHubspotContacts extends Command
             try {
                 // Prepare data for the service
                 $data = $this->prepareContactData($contact);
-                
+
                 if ($contact->hubspot_id) {
                     $service->updateContact($data);
                 } else {
                     $service->createContact($data, get_class($contact));
                 }
-                
+
                 $successCount++;
                 $progressBar->advance();
             } catch (\Exception $e) {
@@ -119,7 +119,7 @@ class SyncHubspotContacts extends Command
     protected function prepareContactData($contact): array
     {
         $data = $contact->toArray();
-        
+
         // Add HubSpot-specific properties
         $data['hubspotMap'] = $contact->hubspotMap ?? [];
         $data['hubspotUpdateMap'] = $contact->hubspotUpdateMap ?? [];

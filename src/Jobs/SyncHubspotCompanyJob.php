@@ -121,5 +121,4 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
 
         return new CompanyObject(['properties' => $properties]);
     }
-
 }
