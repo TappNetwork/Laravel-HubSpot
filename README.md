@@ -33,12 +33,13 @@ HUBSPOT_PROPERTY_GROUP_LABEL=App User Profile
 
 ### User Model Setup
 
-Add the trait to your User model and define the HubSpot property mapping:
+Add the trait to your User model, implement the required interface, and define the HubSpot property mapping:
 
 ```php
 use Tapp\LaravelHubspot\Models\HubspotContact;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HubspotModelInterface
 {
     use HubspotContact;
 
@@ -47,6 +48,38 @@ class User extends Authenticatable
         'first_name' => 'first_name',
         'last_name' => 'last_name',
         'user_type' => 'type.name', // Supports dot notation for relations
+    ];
+}
+```
+
+### Interface Requirement
+
+**Important**: Models must implement `HubspotModelInterface` to enable automatic synchronization. This interface ensures your models have the required methods for HubSpot integration:
+
+- `getHubspotMap()` - Returns the property mapping array
+- `getHubspotUpdateMap()` - Returns update-specific property mapping
+- `getHubspotCompanyRelation()` - Returns the company relationship name
+- `getHubspotProperties()` - Returns dynamic properties
+- `getHubspotId()` / `setHubspotId()` - Manages the HubSpot ID
+
+The traits (`HubspotContact`, `HubspotCompany`) provide the implementation for these methods, so you only need to implement the interface and define your `$hubspotMap` array.
+
+### Company Model Setup
+
+For company models, use the `HubspotCompany` trait:
+
+```php
+use Tapp\LaravelHubspot\Models\HubspotCompany;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+
+class Company extends Model implements HubspotModelInterface
+{
+    use HubspotCompany;
+
+    public array $hubspotMap = [
+        'name' => 'name',
+        'domain' => 'domain',
+        'industry' => 'industry',
     ];
 }
 ```
@@ -69,7 +102,7 @@ public function hubspotProperties(array $map): array
 
 ### Observers (Recommended)
 
-Register observers in your `AppServiceProvider` for better separation of concerns:
+Register observers in your `AppServiceProvider` for better separation of concerns. The observers will automatically sync models that implement `HubspotModelInterface`:
 
 ```php
 use App\Models\User;
