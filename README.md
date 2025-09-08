@@ -135,7 +135,6 @@ composer test-coverage
 HUBSPOT_TEST_API_KEY=your_test_api_key_here
 HUBSPOT_DISABLED=false
 HUBSPOT_LOG_REQUESTS=true
-HUBSPOT_USE_REAL_API=false
 HUBSPOT_PROPERTY_GROUP=test_property_group
 HUBSPOT_QUEUE_ENABLED=false
 ```
@@ -158,10 +157,10 @@ Switch between mocked and real API calls:
 
 ```bash
 # Run with mocks (fast, no API calls)
-HUBSPOT_USE_REAL_API=false composer test
+HUBSPOT_DISABLED=true composer test
 
 # Run with real API calls (requires API key)
-HUBSPOT_USE_REAL_API=true composer test
+HUBSPOT_DISABLED=false composer test
 ```
 
 ## Testing in Consuming Projects
