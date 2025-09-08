@@ -2,12 +2,45 @@
 
 use Illuminate\Database\Eloquent\Model;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+use Tapp\LaravelHubspot\Models\HubspotContact;
 use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
 use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
 beforeEach(function () {
     $this->observer = new HubspotContactObserver;
 });
+
+// Test model that uses HubspotContact trait to ensure it gets analyzed
+class ContactObserverTestModel extends Model implements HubspotModelInterface
+{
+    use HubspotModelTrait;
+    use HubspotContact;
+
+    protected $fillable = ['email', 'first_name', 'last_name'];
+
+    protected $table = 'contact_observer_test_models';
+
+    public array $hubspotMap = [
+        'email' => 'email',
+        'firstname' => 'first_name',
+        'lastname' => 'last_name',
+    ];
+
+    public function getHubspotMap(): array
+    {
+        return $this->hubspotMap;
+    }
+
+    public function getHubspotUpdateMap(): array
+    {
+        return $this->hubspotMap;
+    }
+
+    public function getHubspotCompanyRelation(): ?string
+    {
+        return null;
+    }
+}
 
 test('it includes dynamic properties from overridden hubspot properties method', function () {
     // Create a test model that overrides hubspotProperties method
