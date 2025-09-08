@@ -42,8 +42,8 @@ class BaseModelTestModel extends Model implements HubspotModelInterface
 // Test model that uses HubspotContact trait to ensure it gets analyzed
 class ContactObserverTestModel extends Model implements HubspotModelInterface
 {
-    use HubspotModelTrait;
     use HubspotContact;
+    use HubspotModelTrait;
 
     protected $fillable = ['email', 'first_name', 'last_name', 'hubspot_id'];
 
