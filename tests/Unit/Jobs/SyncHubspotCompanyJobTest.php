@@ -51,7 +51,7 @@ test('it logs permanent failure', function () {
         'HubSpot company sync job failed permanently',
         Mockery::any()
     );
-    
+
     // Allow other log methods to be called without expectations
     Log::shouldReceive('channel')->andReturnSelf();
     Log::shouldReceive('info')->andReturnSelf();
