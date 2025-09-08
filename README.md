@@ -86,20 +86,29 @@ class Company extends Model implements HubspotModelInterface
 
 ### Dynamic Properties
 
-Override the `getHubspotProperties` method for computed values:
+Override the `hubspotProperties` method for computed values using trait aliasing:
 
 ```php
-public function getHubspotProperties(array $hubspotMap): array
-{
-    // Add computed properties to the base mapping
-    $properties = [];
-    
-    // Add computed properties
-    $properties['full_name'] = $this->first_name . ' ' . $this->last_name;
-    $properties['display_name'] = $this->getDisplayName();
-    $properties['account_age_days'] = $this->created_at->diffInDays(now());
+use Tapp\LaravelHubspot\Models\HubspotContact {
+    hubspotProperties as traitHubspotProperties;
+}
 
-    return $properties;
+class User extends Authenticatable implements HubspotModelInterface
+{
+    use HubspotContact;
+
+    public function hubspotProperties(array $map): array
+    {
+        // Get the base properties from the trait
+        $properties = $this->traitHubspotProperties($map);
+        
+        // Add computed properties
+        $properties['full_name'] = $this->first_name . ' ' . $this->last_name;
+        $properties['display_name'] = $this->getDisplayName();
+        $properties['account_age_days'] = $this->created_at->diffInDays(now());
+
+        return $properties;
+    }
 }
 ```
 
