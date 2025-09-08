@@ -224,18 +224,10 @@ HUBSPOT_DISABLED=true composer test
 HUBSPOT_DISABLED=false composer test
 ```
 
-## Testing in Consuming Projects
+### Testing Documentation
 
 - **[Quick Start Guide](docs/QUICK_START_TESTING.md)** - Fast testing checklist
 - **[Comprehensive Testing Guide](docs/CONSUMING_PROJECT_TESTING.md)** - Detailed testing strategy
-
-### Quick Testing Steps
-
-1. **Clean test account**: `php scripts/clean-hubspot-test-account.php`
-2. **Configure your app**: Add traits to models and configure HubSpot settings
-3. **Sync properties**: `php artisan hubspot:sync-properties`
-4. **Test sync commands**: `php artisan hubspot:sync-contacts App\Models\User`
-5. **Test user registration**: Create users/companies and verify in HubSpot dashboard
 
 ## Upgrading
 
