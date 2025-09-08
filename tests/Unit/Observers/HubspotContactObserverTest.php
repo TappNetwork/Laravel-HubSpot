@@ -10,13 +10,42 @@ beforeEach(function () {
     $this->observer = new HubspotContactObserver;
 });
 
+// Test model that uses HubspotModelTrait to ensure it gets analyzed
+class BaseModelTestModel extends Model implements HubspotModelInterface
+{
+    use HubspotModelTrait;
+
+    protected $fillable = ['name', 'hubspot_id'];
+
+    protected $table = 'base_model_test_models';
+
+    public array $hubspotMap = [
+        'name' => 'name',
+    ];
+
+    public function getHubspotMap(): array
+    {
+        return $this->hubspotMap;
+    }
+
+    public function getHubspotUpdateMap(): array
+    {
+        return $this->hubspotMap;
+    }
+
+    public function getHubspotCompanyRelation(): ?string
+    {
+        return null;
+    }
+}
+
 // Test model that uses HubspotContact trait to ensure it gets analyzed
 class ContactObserverTestModel extends Model implements HubspotModelInterface
 {
     use HubspotModelTrait;
     use HubspotContact;
 
-    protected $fillable = ['email', 'first_name', 'last_name'];
+    protected $fillable = ['email', 'first_name', 'last_name', 'hubspot_id'];
 
     protected $table = 'contact_observer_test_models';
 

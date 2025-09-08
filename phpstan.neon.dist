@@ -11,4 +11,3 @@ parameters:
     checkModelProperties: true
     ignoreErrors:
         - '#Trait .+ is used zero times and is not analysed#'
-        - '#Call to function is_object\(\) with .+ will always evaluate to true#'
