@@ -182,13 +182,11 @@ class HubspotCompanyService
                 $results = $searchResults->getResults();
                 $result = $results[0];
 
-                // Convert object to array if needed
-                if (is_object($result)) {
-                    $result = [
-                        'id' => $result->getId(),
-                        'properties' => $result->getProperties() ?: [],
-                    ];
-                }
+                // Convert object to array for consistency
+                $result = [
+                    'id' => $result->getId(),
+                    'properties' => $result->getProperties() ?: [],
+                ];
 
                 Log::info('Found company by exact name match', [
                     'search_name' => $cleanName,

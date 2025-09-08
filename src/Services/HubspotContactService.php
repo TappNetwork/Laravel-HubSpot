@@ -36,7 +36,7 @@ class HubspotContactService
             // Convert SimplePublicObject to array for consistency
             return [
                 'id' => $hubspotContact->getId(),
-                'properties' => $hubspotContact->getProperties() ?? [],
+                'properties' => $hubspotContact->getProperties() ?: [],
             ];
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate email) by finding existing contact
@@ -180,7 +180,7 @@ class HubspotContactService
         // Convert SimplePublicObject to array for consistency
         return [
             'id' => $hubspotContact->getId(),
-            'properties' => $hubspotContact->getProperties() ?? [],
+            'properties' => $hubspotContact->getProperties() ?: [],
         ];
     }
 
