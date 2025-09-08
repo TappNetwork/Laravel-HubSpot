@@ -116,7 +116,7 @@ public function hubspotProperties(array $map): array
 
 ### Observers (Required for Automatic Sync)
 
-**Important**: In v2.0, observers are **required** for automatic synchronization. Register observers in your `AppServiceProvider` to enable automatic sync when models are created/updated:
+**Important**: Observers are **required** for automatic synchronization. Register observers in your `AppServiceProvider` to enable automatic sync when models are created/updated:
 
 ```php
 use App\Models\User;
@@ -239,7 +239,7 @@ HUBSPOT_DISABLED=false composer test
 
 ## Upgrading
 
-**⚠️ Upgrading from v1.x?** Please see the [Upgrade Guide](UPGRADE.md) for breaking changes and migration instructions.
+**⚠️ Upgrading from a previous version?** Please see the [Upgrade Guide](UPGRADE.md) for breaking changes and migration instructions.
 
 ## Changelog
 
