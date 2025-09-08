@@ -114,9 +114,9 @@ public function hubspotProperties(array $map): array
 }
 ```
 
-### Observers (Recommended)
+### Observers (Required for Automatic Sync)
 
-Register observers in your `AppServiceProvider` for better separation of concerns. The observers will automatically sync models that implement `HubspotModelInterface`:
+**Important**: In v2.0, observers are **required** for automatic synchronization. Register observers in your `AppServiceProvider` to enable automatic sync when models are created/updated:
 
 ```php
 use App\Models\User;
@@ -130,6 +130,20 @@ public function boot(): void
     Company::observe(HubspotCompanyObserver::class);
 }
 ```
+
+### Manual Sync (Alternative)
+
+If you prefer manual control over when syncing occurs, you can use the provided commands instead of observers:
+
+```bash
+# Sync all contacts from a specific model
+php artisan hubspot:sync-contacts App\Models\User
+
+# Sync with options
+php artisan hubspot:sync-contacts App\Models\User --delay=1 --limit=100
+```
+
+**Note**: Without observers, models will only sync when you explicitly run these commands.
 
 ### Sync Properties
 
