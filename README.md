@@ -91,10 +91,24 @@ Override the `hubspotProperties` method for computed values:
 ```php
 public function hubspotProperties(array $map): array
 {
-    $properties = parent::hubspotProperties($map);
+    // Get the base properties from the trait
+    $properties = [];
+    
+    foreach ($map as $key => $value) {
+        if (strpos($value, '.')) {
+            $propertyValue = PropertyConverter::getNestedValue($this->toArray(), $value);
+        } else {
+            $propertyValue = $this->$value;
+        }
+        
+        if (!is_null($propertyValue)) {
+            $properties[$key] = $propertyValue;
+        }
+    }
     
     // Add computed properties
     $properties['full_name'] = $this->first_name . ' ' . $this->last_name;
+    $properties['display_name'] = $this->getDisplayName();
 
     return $properties;
 }
