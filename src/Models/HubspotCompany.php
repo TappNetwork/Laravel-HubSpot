@@ -9,6 +9,7 @@ use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 trait HubspotCompany
 {
     use HubspotModelTrait;
+
     /**
      * Get properties to be synced with hubspot
      */
