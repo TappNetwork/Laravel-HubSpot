@@ -60,18 +60,26 @@ class SyncHubspotProperties extends Command
     {
         $response = Hubspot::crm()->properties()->coreApi()->getAll($object, false);
 
-        $hubspotProperties = collect($response->getResults())->pluck('name');
+        $allHubspotProperties = collect($response->getResults())->pluck('name');
 
-        // Use the hubspotProperties method to get the property keys
-        $syncProperties = array_keys((new $model)->hubspotProperties((new $model)->hubspotMap));
+        // Use the hubspotMap to get the property keys, plus any dynamic properties
+        $modelInstance = new $model;
+        $syncProperties = array_keys($modelInstance->getHubspotMap());
 
-        // Output sync properties (from the model)
-        $this->line('Sync properties (from model): '.implode(', ', $syncProperties));
+        // Add dynamic properties from hubspotProperties method
+        $dynamicProperties = $modelInstance->hubspotProperties($modelInstance->getHubspotMap());
+        $dynamicPropertyKeys = array_keys($dynamicProperties);
+        $syncProperties = array_unique(array_merge($syncProperties, $dynamicPropertyKeys));
 
-        $missingProperties = collect($syncProperties)->diff($hubspotProperties);
+        // Only show HubSpot properties that are relevant to our sync
+        $relevantHubspotProperties = $allHubspotProperties->intersect($syncProperties);
+        $missingProperties = collect($syncProperties)->diff($allHubspotProperties);
 
-        // Output all current HubSpot properties
-        $this->line('All HubSpot properties: '.$hubspotProperties->implode(', '));
+        // Output properties from app
+        $this->line('Properties from app: '.implode(', ', $syncProperties));
+
+        // Output existing HubSpot properties that match our sync
+        $this->line('Existing HubSpot properties: '.$relevantHubspotProperties->implode(', '));
 
         // Output missing properties
         $this->line('Missing properties: '.$missingProperties->implode(', '));

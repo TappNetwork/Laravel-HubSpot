@@ -4,9 +4,11 @@ namespace Tapp\LaravelHubspot\Models;
 
 use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate as CompanyObject;
 use Tapp\LaravelHubspot\Services\PropertyConverter;
+use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
 trait HubspotCompany
 {
+    use HubspotModelTrait;
     /**
      * Get properties to be synced with hubspot
      */
