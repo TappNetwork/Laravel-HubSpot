@@ -67,6 +67,8 @@ The following methods have been **removed** from traits and should not be used:
 - `associateCompanyIfNeeded()`
 - `saveHubspotId()`
 
+**Note:** The `updateOrCreateHubspotContact()` method has been **restored** in v2.0.1 to maintain backward compatibility. This method now uses the new service architecture internally.
+
 **From HubspotCompany trait:**
 - `createHubspotCompany()`
 - `updateHubspotCompany()`
@@ -91,6 +93,17 @@ $contactService->createContact($data, User::class);
 
 // Update contact
 $contactService->updateContact($data);
+```
+
+#### 5. Backward Compatibility Method
+
+**The `updateOrCreateHubspotContact()` method is still available:**
+```php
+// This method still works in v2.0.1+
+$user->updateOrCreateHubspotContact();
+
+// It internally uses the new service architecture
+// and handles both create and update scenarios automatically
 ```
 
 ### Benefits of v2.0

@@ -74,4 +74,69 @@ trait HubspotContact
 
         return new ContactObject(['properties' => $convertedProperties]);
     }
+
+    /**
+     * Update or create a HubSpot contact for this model.
+     *
+     * This method provides backward compatibility for the removed updateOrCreateHubspotContact method.
+     * It will attempt to update the contact if a hubspot_id exists, otherwise it will create a new one.
+     *
+     * @return array The HubSpot contact data
+     *
+     * @throws \Exception If the operation fails
+     */
+    public function updateOrCreateHubspotContact(): array
+    {
+        $service = app(\Tapp\LaravelHubspot\Services\HubspotContactService::class);
+
+        $data = [
+            'id' => $this->getKey(),
+            'hubspot_id' => $this->getHubspotId(),
+            'hubspotMap' => $this->getHubspotMap(),
+            'hubspotUpdateMap' => $this->getHubspotUpdateMap(),
+            'hubspotCompanyRelation' => $this->getHubspotCompanyRelation(),
+        ];
+
+        // Include mapped fields
+        foreach ($this->getHubspotMap() as $hubspotField => $modelField) {
+            $data[$modelField] = data_get($this, $modelField);
+        }
+
+        // Include dynamic properties
+        $dynamicProperties = $this->getHubspotProperties($this->getHubspotMap());
+        if (! empty($dynamicProperties)) {
+            $data['dynamicProperties'] = $dynamicProperties;
+        }
+
+        // Include company relation data if it exists
+        $companyRelation = $this->getHubspotCompanyRelation();
+        if (! empty($companyRelation)) {
+            $company = $this->getRelationValue($companyRelation);
+            if ($company) {
+                $data['hubspotCompanyRelation'] = [
+                    'id' => $company->getKey(),
+                    'hubspot_id' => $company instanceof \Tapp\LaravelHubspot\Contracts\HubspotModelInterface ? $company->getHubspotId() : ($company->hubspot_id ?? null),
+                    'name' => $company->name ?? $company->getAttribute('name'),
+                ];
+            }
+        }
+
+        // Try to update first if hubspot_id exists, otherwise create
+        if (! empty($this->getHubspotId())) {
+            try {
+                return $service->updateContact($data);
+            } catch (\Exception $e) {
+                // If update fails (e.g., invalid hubspot_id), try to create instead
+                \Illuminate\Support\Facades\Log::info('Update failed, attempting to create contact', [
+                    'model_id' => $this->getKey(),
+                    'hubspot_id' => $this->getHubspotId(),
+                    'error' => $e->getMessage(),
+                ]);
+
+                return $service->createContact($data, get_class($this));
+            }
+        } else {
+            return $service->createContact($data, get_class($this));
+        }
+    }
 }
