@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Models\HubspotContact;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
@@ -68,10 +67,6 @@ class TestUserModel implements HubspotModelInterface
 }
 
 beforeEach(function () {
-    // Mock the Log facade to prevent "Call to a member function __call() on null" errors
-    Log::shouldReceive('info', 'warning', 'error', 'debug')
-        ->andReturnSelf();
-
     $this->model = new TestUserModel;
 });
 

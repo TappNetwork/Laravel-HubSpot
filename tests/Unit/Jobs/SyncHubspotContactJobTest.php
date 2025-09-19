@@ -65,8 +65,7 @@ test('it skips execution when hubspot is disabled', function () {
 test('it logs error when service fails', function () {
     test()->skipIfNoRealApi();
 
-    // Mock the Log facade with proper expectations
-    Log::shouldReceive('info', 'warning', 'debug')->andReturnSelf();
+    // Override the global Log mock to add specific expectation for error logging
     Log::shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed',
         Mockery::any()
@@ -86,8 +85,7 @@ test('it logs error when service fails', function () {
 test('it logs permanent failure', function () {
     test()->skipIfNoRealApi();
 
-    // Mock the Log facade with proper expectations
-    Log::shouldReceive('info', 'warning', 'debug')->andReturnSelf();
+    // Override the global Log mock to add specific expectation for error logging
     Log::shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed permanently',
         Mockery::any()
@@ -122,9 +120,6 @@ test('it handles delete operation', function () {
 });
 
 test('it skips execution when no api key is configured', function () {
-    // Mock the Log facade to prevent null reference errors
-    Log::shouldReceive('info', 'warning', 'error', 'debug')->andReturnSelf();
-
     config(['hubspot.api_key' => null]);
 
     $modelData = ['id' => 1, 'email' => 'test@example.com'];

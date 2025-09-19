@@ -3,6 +3,7 @@
 namespace Tapp\LaravelHubspot\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Log;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Tapp\LaravelHubspot\LaravelHubspotServiceProvider;
 
@@ -17,9 +18,36 @@ class TestCase extends Orchestra
     {
         parent::setUp();
 
+        // Set up comprehensive Log facade mocking to prevent CI issues
+        $this->setupLogMocking();
+
         Factory::guessFactoryNamesUsing(
             fn (string $modelName) => 'Tapp\\LaravelHubspot\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
+    }
+
+    /**
+     * Set up comprehensive Log facade mocking to handle all possible logging calls
+     * This prevents "BadMethodCallException: channel() not specified" errors in CI
+     */
+    protected function setupLogMocking(): void
+    {
+        // Mock internal Laravel logging methods that might be called but not tested
+        Log::shouldReceive('channel')->andReturnSelf()->byDefault();
+        Log::shouldReceive('stack')->andReturnSelf()->byDefault();
+        Log::shouldReceive('build')->andReturnSelf()->byDefault();
+        Log::shouldReceive('driver')->andReturnSelf()->byDefault();
+
+        // Mock all logging level methods with byDefault() to allow overriding
+        Log::shouldReceive('emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug')
+            ->andReturnSelf()->byDefault();
+
+        // Mock write methods that might be called internally
+        Log::shouldReceive('write')->andReturnSelf()->byDefault();
+        Log::shouldReceive('writeLog')->andReturnSelf()->byDefault();
+
+        // Mock any other methods that might be called
+        Log::shouldReceive('log')->andReturnSelf()->byDefault();
     }
 
     protected function tearDown(): void

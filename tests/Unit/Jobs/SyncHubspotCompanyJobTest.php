@@ -46,8 +46,7 @@ test('it skips execution when hubspot is disabled', function () {
 });
 
 test('it logs permanent failure', function () {
-    // Mock the Log facade with proper expectations
-    Log::shouldReceive('info', 'warning', 'debug')->andReturnSelf();
+    // Override the global Log mock to add specific expectation for error logging
     Log::shouldReceive('error')->once()->with(
         'HubSpot company sync job failed permanently',
         Mockery::any()
