@@ -37,6 +37,14 @@ See the [Migration Guide](README.md#breaking-changes-in-v20) in the README for d
 - **Improved performance** with optimized property conversion
 - **Enhanced testability** with focused, single-purpose classes
 
+## v1.1.4 - 2025-09-08
+
+### What's Changed
+
+* Bump actions/checkout from 4 to 5 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/25
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v1.1.3...v1.1.4
+
 ## v1.1.3 - 2025-08-26
 
 ### What's Changed
