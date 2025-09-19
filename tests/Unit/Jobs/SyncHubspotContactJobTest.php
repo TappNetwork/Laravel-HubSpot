@@ -65,10 +65,20 @@ test('it skips execution when hubspot is disabled', function () {
 test('it logs error when service fails', function () {
     test()->skipIfNoRealApi();
 
-    Log::shouldReceive('error')->once()->with(
+    // Create a robust mock for the Log facade
+    $logMock = Mockery::mock('alias:Illuminate\Support\Facades\Log');
+
+    // Mock channel() to return self (fluent interface)
+    $logMock->shouldReceive('channel')->andReturnSelf();
+
+    // Mock the expected error call
+    $logMock->shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed',
         Mockery::any()
     );
+
+    // Allow other log methods that might be called
+    $logMock->shouldReceive('info', 'warning', 'debug')->andReturnSelf();
 
     $modelData = [
         'id' => 1,
@@ -84,10 +94,20 @@ test('it logs error when service fails', function () {
 test('it logs permanent failure', function () {
     test()->skipIfNoRealApi();
 
-    Log::shouldReceive('error')->once()->with(
+    // Create a robust mock for the Log facade
+    $logMock = Mockery::mock('alias:Illuminate\Support\Facades\Log');
+
+    // Mock channel() to return self (fluent interface)
+    $logMock->shouldReceive('channel')->andReturnSelf();
+
+    // Mock the expected error call
+    $logMock->shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed permanently',
         Mockery::any()
     );
+
+    // Allow other log methods that might be called
+    $logMock->shouldReceive('info', 'warning', 'debug')->andReturnSelf();
 
     $modelData = [
         'id' => 1,
