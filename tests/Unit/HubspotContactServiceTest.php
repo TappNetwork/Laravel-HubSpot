@@ -1,10 +1,15 @@
 <?php
 
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
+use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
 beforeEach(function () {
+    // Mock the Log facade to prevent "Call to a member function __call() on null" errors
+    Log::shouldReceive('info', 'warning', 'error', 'debug')
+        ->andReturnSelf();
+
     $this->service = app(HubspotContactService::class);
 });
 

@@ -46,25 +46,12 @@ test('it skips execution when hubspot is disabled', function () {
 });
 
 test('it logs permanent failure', function () {
-    // Create a more robust mock for the Log facade
-    // This handles cases where Laravel internally calls channel() before logging
-    $logMock = Mockery::mock('alias:Illuminate\Support\Facades\Log');
-
-    // Mock channel() to return self (fluent interface)
-    $logMock->shouldReceive('channel')
-        ->andReturnSelf();
-
-    // Mock the error call that we expect to happen
-    $logMock->shouldReceive('error')
-        ->once()
-        ->with(
-            'HubSpot company sync job failed permanently',
-            Mockery::any()
-        );
-
-    // Allow other log methods that might be called
-    $logMock->shouldReceive('info', 'warning', 'debug')
-        ->andReturnSelf();
+    // Mock the Log facade with proper expectations
+    Log::shouldReceive('info', 'warning', 'debug')->andReturnSelf();
+    Log::shouldReceive('error')->once()->with(
+        'HubSpot company sync job failed permanently',
+        Mockery::any()
+    );
 
     $modelData = ['id' => 1, 'name' => 'Test Company'];
     $job = new SyncHubspotCompanyJob($modelData, 'create', 'TestModel');

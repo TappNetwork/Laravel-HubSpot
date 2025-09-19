@@ -65,20 +65,12 @@ test('it skips execution when hubspot is disabled', function () {
 test('it logs error when service fails', function () {
     test()->skipIfNoRealApi();
 
-    // Create a robust mock for the Log facade
-    $logMock = Mockery::mock('alias:Illuminate\Support\Facades\Log');
-
-    // Mock channel() to return self (fluent interface)
-    $logMock->shouldReceive('channel')->andReturnSelf();
-
-    // Mock the expected error call
-    $logMock->shouldReceive('error')->once()->with(
+    // Mock the Log facade with proper expectations
+    Log::shouldReceive('info', 'warning', 'debug')->andReturnSelf();
+    Log::shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed',
         Mockery::any()
     );
-
-    // Allow other log methods that might be called
-    $logMock->shouldReceive('info', 'warning', 'debug')->andReturnSelf();
 
     $modelData = [
         'id' => 1,
@@ -94,20 +86,12 @@ test('it logs error when service fails', function () {
 test('it logs permanent failure', function () {
     test()->skipIfNoRealApi();
 
-    // Create a robust mock for the Log facade
-    $logMock = Mockery::mock('alias:Illuminate\Support\Facades\Log');
-
-    // Mock channel() to return self (fluent interface)
-    $logMock->shouldReceive('channel')->andReturnSelf();
-
-    // Mock the expected error call
-    $logMock->shouldReceive('error')->once()->with(
+    // Mock the Log facade with proper expectations
+    Log::shouldReceive('info', 'warning', 'debug')->andReturnSelf();
+    Log::shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed permanently',
         Mockery::any()
     );
-
-    // Allow other log methods that might be called
-    $logMock->shouldReceive('info', 'warning', 'debug')->andReturnSelf();
 
     $modelData = [
         'id' => 1,
@@ -138,6 +122,9 @@ test('it handles delete operation', function () {
 });
 
 test('it skips execution when no api key is configured', function () {
+    // Mock the Log facade to prevent null reference errors
+    Log::shouldReceive('info', 'warning', 'error', 'debug')->andReturnSelf();
+
     config(['hubspot.api_key' => null]);
 
     $modelData = ['id' => 1, 'email' => 'test@example.com'];
