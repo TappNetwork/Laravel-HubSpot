@@ -3,7 +3,8 @@
 namespace Tapp\LaravelHubspot\Services;
 
 use HubSpot\Client\Crm\Contacts\ApiException;
-use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactUpdateObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactCreateObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
@@ -26,30 +27,27 @@ class HubspotContactService
             }
 
             // Update the model with HubSpot ID
-            $contactId = is_array($hubspotContact) ? $hubspotContact['id'] : $hubspotContact->getId();
+            $contactId = $hubspotContact->getId();
             $this->updateModelHubspotId($data['id'] ?? null, $contactId, $modelClass);
 
             // Handle company association
             $this->associateCompanyIfNeeded($contactId, $data);
 
             // Convert SimplePublicObject to array for consistency
-            if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject) {
-                return [
-                    'id' => $hubspotContact->getId(),
-                    'properties' => $hubspotContact->getProperties() ?? [],
-                ];
-            }
-
-            return $hubspotContact;
+            return [
+                'id' => $hubspotContact->getId(),
+                'properties' => $hubspotContact->getProperties() ?: [],
+            ];
         } catch (ApiException $e) {
             // Handle 409 conflict (duplicate email) by finding existing contact
-            if ($e->getCode() === 409 && ! empty($data['email'])) {
+            $emailField = $this->getMappedEmailField($data);
+            if ($e->getCode() === 409 && $emailField) {
                 Log::info('HubSpot contact already exists, finding by email', [
-                    'email' => $data['email'],
+                    'email' => $emailField,
                     'error' => $e->getMessage(),
                 ]);
 
-                $contact = $this->findContact(['email' => $data['email']]);
+                $contact = $this->findContact($data);
                 if ($contact && isset($contact['id'])) {
                     // Update the model with existing HubSpot ID
                     $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
@@ -81,13 +79,14 @@ class HubspotContactService
             throw $e;
         } catch (\Exception $e) {
             // Handle "Contact already exists" error that might not be an ApiException
-            if (str_contains($e->getMessage(), 'Contact already exists') && ! empty($data['email'])) {
+            $emailField = $this->getMappedEmailField($data);
+            if (str_contains($e->getMessage(), 'Contact already exists') && $emailField) {
                 Log::info('HubSpot contact already exists, finding by email', [
-                    'email' => $data['email'],
+                    'email' => $emailField,
                     'error' => $e->getMessage(),
                 ]);
 
-                $contact = $this->findContact(['email' => $data['email']]);
+                $contact = $this->findContact($data);
                 if ($contact && isset($contact['id'])) {
                     // Update the model with existing HubSpot ID
                     $this->updateModelHubspotId($data['id'] ?? null, $contact['id'], $modelClass);
@@ -120,8 +119,9 @@ class HubspotContactService
         // Validate that the contact exists in HubSpot before attempting update
         if (! $this->validateHubspotContactExists($data['hubspot_id'])) {
             // Try to find by email without clearing the invalid ID
-            if (! empty($data['email'])) {
-                $contact = $this->findContact(['email' => $data['email']]);
+            $emailField = $this->getMappedEmailField($data);
+            if ($emailField) {
+                $contact = $this->findContact($data);
                 if ($contact) {
                     // Update with correct hubspot_id and retry
                     $contactId = $contact['id'];
@@ -138,7 +138,7 @@ class HubspotContactService
 
         // Use hubspotUpdateMap if defined and not empty, otherwise default to hubspotMap
         $map = (! empty($data['hubspotUpdateMap'])) ? $data['hubspotUpdateMap'] : ($data['hubspotMap'] ?? []);
-        $properties = $this->buildPropertiesObject($map, $data);
+        $properties = $this->buildUpdatePropertiesObject($map, $data);
 
         // Log the properties being sent for debugging
         $propertiesArray = $this->buildPropertiesArray($map, $data);
@@ -178,15 +178,10 @@ class HubspotContactService
         $this->associateCompanyIfNeeded($data['hubspot_id'], $data);
 
         // Convert SimplePublicObject to array for consistency
-        if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject) {
-            /** @var \HubSpot\Client\Crm\Contacts\Model\SimplePublicObject $hubspotContact */
-            return [
-                'id' => $hubspotContact->getId(),
-                'properties' => $hubspotContact->getProperties() ?? [],
-            ];
-        }
-
-        return $hubspotContact;
+        return [
+            'id' => $hubspotContact->getId(),
+            'properties' => $hubspotContact->getProperties() ?: [],
+        ];
     }
 
     /**
@@ -234,9 +229,11 @@ class HubspotContactService
             }
         }
 
-        if (! empty($data['email'])) {
+        // Use the mapped email field from hubspotMap instead of data['email'] directly
+        $emailField = $this->getMappedEmailField($data);
+        if ($emailField) {
             try {
-                $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['email'], null, null, null, false, 'email');
+                $contact = Hubspot::crm()->contacts()->basicApi()->getById($emailField, null, null, null, false, 'email');
 
                 // Check if response is an Error object
                 if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
@@ -244,7 +241,7 @@ class HubspotContactService
                 }
 
                 // Update the model with HubSpot ID
-                $contactId = is_array($contact) ? $contact['id'] : $contact->getId();
+                $contactId = $contact->getId();
                 $this->updateModelHubspotId($data['id'] ?? null, $contactId, $data['modelClass'] ?? null);
 
                 return $this->normalizeContactResponse($contact);
@@ -263,15 +260,6 @@ class HubspotContactService
      */
     protected function normalizeContactResponse($contact): array
     {
-        // Convert SimplePublicObject to array for consistency
-        if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations) {
-            /** @var \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectWithAssociations $contact */
-            return [
-                'id' => $contact->getId(),
-                'properties' => $contact->getProperties() ?? [],
-            ];
-        }
-
         // If it's already an array, return it
         if (is_array($contact)) {
             return $contact;
@@ -290,71 +278,6 @@ class HubspotContactService
     }
 
     /**
-     * Validate that all properties are properly converted to strings for HubSpot API
-     */
-    protected function validateHubspotProperties(array $properties): void
-    {
-        $invalidProperties = [];
-
-        foreach ($properties as $key => $value) {
-            if (! is_string($value)) {
-                $invalidProperties[$key] = [
-                    'value' => $value,
-                    'type' => gettype($value),
-                    'class' => is_object($value) ? get_class($value) : null,
-                ];
-            }
-        }
-
-        if (! empty($invalidProperties)) {
-            throw new \InvalidArgumentException(
-                'HubSpot properties must be strings after automatic conversion. Invalid properties found: '.
-                json_encode($invalidProperties, JSON_PRETTY_PRINT).
-                '. This indicates a data type that could not be automatically converted. Please ensure all properties are convertible to strings.'
-            );
-        }
-    }
-
-    /**
-     * Convert a value to a string suitable for HubSpot API
-     */
-    protected function convertValueForHubspot($value, string $propertyName)
-    {
-        if (is_null($value)) {
-            return null;
-        } elseif ($value instanceof \Carbon\Carbon) {
-            return $value->toISOString();
-        } elseif (is_array($value)) {
-            if (empty($value)) {
-                return null;
-            }
-
-            return (array_keys($value) === range(0, count($value) - 1))
-                ? implode(', ', array_filter($value, 'is_scalar'))
-                : json_encode($value);
-        } elseif (is_object($value)) {
-            if (method_exists($value, '__toString')) {
-                return (string) $value;
-            } elseif (method_exists($value, 'toArray')) {
-                $arrayValue = $value->toArray();
-
-                return is_array($arrayValue) ? json_encode($arrayValue) : (string) $arrayValue;
-            } else {
-                throw new \InvalidArgumentException(
-                    'Cannot convert object of type '.get_class($value)." to string for property: {$propertyName}. ".
-                    'Objects must implement __toString() or toArray() methods to be automatically converted.'
-                );
-            }
-        } elseif (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        } elseif (is_numeric($value)) {
-            return (string) $value;
-        } else {
-            return (string) $value;
-        }
-    }
-
-    /**
      * Build HubSpot properties array for logging purposes.
      */
     protected function buildPropertiesArray(array $map, array $data): array
@@ -363,10 +286,10 @@ class HubspotContactService
 
         // Process mapped properties
         foreach ($map as $hubspotProperty => $modelProperty) {
-            $value = $this->getNestedValue($data, $modelProperty);
+            $value = PropertyConverter::getNestedValue($data, $modelProperty);
 
             if ($value !== null) {
-                $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
                 }
@@ -381,7 +304,7 @@ class HubspotContactService
                 if (array_key_exists($hubspotProperty, $map)) {
                     // Only add if it wasn't already processed above
                     if (! array_key_exists($hubspotProperty, $properties)) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -389,7 +312,7 @@ class HubspotContactService
                 } else {
                     // Convert and add dynamic property
                     if ($value !== null) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -404,16 +327,16 @@ class HubspotContactService
     /**
      * Build HubSpot properties object from data.
      */
-    protected function buildPropertiesObject(array $map, array $data): ContactObject
+    protected function buildPropertiesObject(array $map, array $data): ContactCreateObject
     {
         $properties = [];
 
         // Process mapped properties
         foreach ($map as $hubspotProperty => $modelProperty) {
-            $value = $this->getNestedValue($data, $modelProperty);
+            $value = PropertyConverter::getNestedValue($data, $modelProperty);
 
             if ($value !== null) {
-                $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
                 }
@@ -428,7 +351,7 @@ class HubspotContactService
                 if (array_key_exists($hubspotProperty, $map)) {
                     // Only add if it wasn't already processed above
                     if (! array_key_exists($hubspotProperty, $properties)) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -436,7 +359,7 @@ class HubspotContactService
                 } else {
                     // Convert and add dynamic property
                     if ($value !== null) {
-                        $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                        $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                         if ($convertedValue !== null) {
                             $properties[$hubspotProperty] = $convertedValue;
                         }
@@ -446,17 +369,41 @@ class HubspotContactService
         }
 
         // Validate all properties are strings before creating the object
-        $this->validateHubspotProperties($properties);
+        PropertyConverter::validateHubspotProperties($properties);
 
-        return new ContactObject(['properties' => $properties]);
+        return new ContactCreateObject(['properties' => $properties]);
     }
 
     /**
-     * Get nested value from array using dot notation.
+     * Build HubSpot properties object for update operations.
      */
-    protected function getNestedValue(array $array, string $key)
+    protected function buildUpdatePropertiesObject(array $map, array $data): ContactUpdateObject
     {
-        return data_get($array, $key);
+        $properties = [];
+
+        // Process mapped properties
+        foreach ($map as $hubspotProperty => $modelProperty) {
+            $value = PropertyConverter::getNestedValue($data, $modelProperty);
+
+            if ($value !== null) {
+                $properties[$hubspotProperty] = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
+            }
+        }
+
+        // Process dynamic properties that are explicitly added by hubspotProperties method
+        if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
+            foreach ($data['dynamicProperties'] as $hubspotProperty => $value) {
+                // If this property is in the map but wasn't found above, use the dynamic property
+                if (! isset($properties[$hubspotProperty]) && $value !== null) {
+                    $properties[$hubspotProperty] = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
+                }
+            }
+        }
+
+        // Validate all properties are strings before creating the object
+        PropertyConverter::validateHubspotProperties($properties);
+
+        return new ContactUpdateObject(['properties' => $properties]);
     }
 
     /**
@@ -550,11 +497,32 @@ class HubspotContactService
                     'hubspot_id' => $companyData['hubspot_id'],
                     'contact_id' => $contactId,
                     'error' => $e->getMessage(),
-                    'error_code' => method_exists($e, 'getCode') ? $e->getCode() : 'unknown',
+                    'error_code' => $e->getCode(),
                 ]);
                 throw $e;
             }
         }
+    }
+
+    /**
+     * Get the mapped email field from the data's hubspotMap
+     */
+    protected function getMappedEmailField(array $data): ?string
+    {
+        // Check if hubspotMap exists and has an email mapping
+        if (isset($data['hubspotMap']['email'])) {
+            $emailField = $data['hubspotMap']['email'];
+
+            // Handle dot notation for nested properties
+            if (strpos($emailField, '.')) {
+                return data_get($data, $emailField);
+            }
+
+            return $data[$emailField] ?? null;
+        }
+
+        // Fallback to data['email'] if no mapping is defined
+        return $data['email'] ?? null;
     }
 
     /**

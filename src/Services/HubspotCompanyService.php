@@ -98,14 +98,15 @@ class HubspotCompanyService
 
             // Try to create the company, handle duplicates gracefully
             try {
-                $newCompany = Hubspot::crm()->companies()->basicApi()->create(['properties' => $properties]);
+                $companyInput = new \HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate(['properties' => $properties]);
+                $newCompany = Hubspot::crm()->companies()->basicApi()->create($companyInput);
 
                 // Check if response is an Error object
                 if ($newCompany instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
                     throw new \Exception('HubSpot API returned an error: '.$newCompany->getMessage());
                 }
 
-                $companyId = is_array($newCompany) ? $newCompany['id'] : $newCompany->getId();
+                $companyId = $newCompany->getId();
 
                 Log::info('Created new company in HubSpot', [
                     'company_name' => $companyName,
@@ -172,16 +173,20 @@ class HubspotCompanyService
 
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
 
-            if ($searchResults['total'] > 0) {
-                $result = $searchResults['results'][0];
+            // Check if it's an error response
+            if ($searchResults instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+                throw new \Exception('HubSpot API returned an error: '.$searchResults->getMessage());
+            }
 
-                // Convert object to array if needed
-                if (is_object($result)) {
-                    $result = [
-                        'id' => $result->getId(),
-                        'properties' => $result->getProperties() ?? [],
-                    ];
-                }
+            if ($searchResults->getTotal() > 0) {
+                $results = $searchResults->getResults();
+                $result = $results[0];
+
+                // Convert object to array for consistency
+                $result = [
+                    'id' => $result->getId(),
+                    'properties' => $result->getProperties() ?: [],
+                ];
 
                 Log::info('Found company by exact name match', [
                     'search_name' => $cleanName,
@@ -209,9 +214,14 @@ class HubspotCompanyService
 
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
 
-            if ($searchResults['total'] > 0) {
+            // Check if it's an error response
+            if ($searchResults instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+                throw new \Exception('HubSpot API returned an error: '.$searchResults->getMessage());
+            }
+
+            if ($searchResults->getTotal() > 0) {
                 // Find the best match by comparing names
-                $bestMatch = $this->findBestNameMatch($cleanName, $searchResults['results']);
+                $bestMatch = $this->findBestNameMatch($cleanName, $searchResults->getResults());
                 if ($bestMatch) {
                     // Convert object to array if needed
                     /** @phpstan-ignore-next-line */

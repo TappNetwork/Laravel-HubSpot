@@ -22,6 +22,14 @@ class TestCase extends Orchestra
         );
     }
 
+    protected function tearDown(): void
+    {
+        // Clean up Mockery expectations to prevent test interference
+        \Mockery::close();
+
+        parent::tearDown();
+    }
+
     protected function getPackageProviders($app)
     {
         return [
@@ -34,14 +42,14 @@ class TestCase extends Orchestra
         config()->set('database.default', 'testing');
 
         // Set up HubSpot configuration for testing
-        config()->set('hubspot.api_key', env('HUBSPOT_TEST_API_KEY'));
-        config()->set('hubspot.disabled', env('HUBSPOT_DISABLED', false));
-        config()->set('hubspot.log_requests', env('HUBSPOT_LOG_REQUESTS', false));
-        config()->set('hubspot.property_group', env('HUBSPOT_PROPERTY_GROUP', 'test_property_group'));
-        config()->set('hubspot.property_group_label', env('HUBSPOT_PROPERTY_GROUP_LABEL', 'Test Property Group'));
+        config()->set('hubspot.api_key', config('hubspot.api_key'));
+        config()->set('hubspot.disabled', config('hubspot.disabled', false));
+        config()->set('hubspot.log_requests', config('hubspot.log_requests', false));
+        config()->set('hubspot.property_group', config('hubspot.property_group', 'test_property_group'));
+        config()->set('hubspot.property_group_label', config('hubspot.property_group_label', 'Test Property Group'));
 
         // Queue configuration for testing
-        config()->set('hubspot.queue.enabled', env('HUBSPOT_QUEUE_ENABLED', false));
+        config()->set('hubspot.queue.enabled', config('hubspot.queue.enabled', false));
         config()->set('hubspot.queue.connection', 'sync');
         config()->set('hubspot.queue.queue', 'default');
         config()->set('hubspot.queue.retry_attempts', 1);
@@ -58,8 +66,7 @@ class TestCase extends Orchestra
      */
     protected function useRealApi(): bool
     {
-        return env('HUBSPOT_USE_REAL_API', false) &&
-               config('hubspot.api_key') &&
+        return config('hubspot.api_key') &&
                ! config('hubspot.disabled');
     }
 
@@ -69,7 +76,7 @@ class TestCase extends Orchestra
     protected function skipIfNoRealApi(): void
     {
         if (! $this->useRealApi()) {
-            $this->markTestSkipped('Real API testing disabled. Set HUBSPOT_USE_REAL_API=true and provide HUBSPOT_TEST_API_KEY to enable.');
+            $this->markTestSkipped('Real API testing disabled. Set HUBSPOT_DISABLED=false and provide HUBSPOT_TEST_API_KEY to enable.');
         }
     }
 

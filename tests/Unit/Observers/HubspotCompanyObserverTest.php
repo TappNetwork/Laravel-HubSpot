@@ -12,7 +12,7 @@ class CompanyObserverTestModel extends \Illuminate\Database\Eloquent\Model imple
     use HubspotModelTrait;
     use \Tapp\LaravelHubspot\Models\HubspotCompany;
 
-    protected $fillable = ['name', 'domain'];
+    protected $fillable = ['name', 'domain', 'hubspot_id'];
 
     protected $table = 'company_observer_test_models';
 

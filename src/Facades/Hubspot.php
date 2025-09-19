@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @see \Tapp\LaravelHubspot\LaravelHubspot
+ *
+ * @method static \HubSpot\Discovery\Crm\Discovery crm()
  */
 class Hubspot extends Facade
 {

@@ -33,12 +33,13 @@ HUBSPOT_PROPERTY_GROUP_LABEL=App User Profile
 
 ### User Model Setup
 
-Add the trait to your User model and define the HubSpot property mapping:
+Add the trait to your User model, implement the required interface, and define the HubSpot property mapping:
 
 ```php
 use Tapp\LaravelHubspot\Models\HubspotContact;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HubspotModelInterface
 {
     use HubspotContact;
 
@@ -51,25 +52,69 @@ class User extends Authenticatable
 }
 ```
 
-### Dynamic Properties
+### Interface Requirement
 
-Override the `hubspotProperties` method for computed values:
+**Important**: Models must implement `HubspotModelInterface` to enable automatic synchronization. This interface ensures your models have the required methods for HubSpot integration:
+
+- `getHubspotMap()` - Returns the property mapping array
+- `getHubspotUpdateMap()` - Returns update-specific property mapping
+- `getHubspotCompanyRelation()` - Returns the company relationship name
+- `getHubspotProperties()` - Returns dynamic properties
+- `getHubspotId()` / `setHubspotId()` - Manages the HubSpot ID
+
+The traits (`HubspotContact`, `HubspotCompany`) provide the implementation for these methods, so you only need to implement the interface and define your `$hubspotMap` array.
+
+### Company Model Setup
+
+For company models, use the `HubspotCompany` trait:
 
 ```php
-public function hubspotProperties(array $map): array
-{
-    $properties = parent::hubspotProperties($map);
-    
-    // Add computed properties
-    $properties['full_name'] = $this->first_name . ' ' . $this->last_name;
+use Tapp\LaravelHubspot\Models\HubspotCompany;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 
-    return $properties;
+class Company extends Model implements HubspotModelInterface
+{
+    use HubspotCompany;
+
+    public array $hubspotMap = [
+        'name' => 'name',
+        'domain' => 'domain',
+        'industry' => 'industry',
+    ];
 }
 ```
 
-### Observers (Recommended)
+### Dynamic Properties
 
-Register observers in your `AppServiceProvider` for better separation of concerns:
+Override the `hubspotProperties` method for computed values using trait aliasing:
+
+```php
+use Tapp\LaravelHubspot\Models\HubspotContact {
+    hubspotProperties as traitHubspotProperties;
+}
+
+class User extends Authenticatable implements HubspotModelInterface
+{
+    use HubspotContact;
+
+    public function hubspotProperties(array $map): array
+    {
+        // Get the base properties from the trait
+        $properties = $this->traitHubspotProperties($map);
+        
+        // Add computed properties
+        $properties['full_name'] = $this->first_name . ' ' . $this->last_name;
+        $properties['display_name'] = $this->getDisplayName();
+        $properties['account_age_days'] = $this->created_at->diffInDays(now());
+
+        return $properties;
+    }
+}
+```
+
+### Observers (Required for Automatic Sync)
+
+**Important**: Observers are **required** for automatic synchronization. Register observers in your `AppServiceProvider` to enable automatic sync when models are created/updated:
 
 ```php
 use App\Models\User;
@@ -83,6 +128,20 @@ public function boot(): void
     Company::observe(HubspotCompanyObserver::class);
 }
 ```
+
+### Manual Sync (Alternative)
+
+If you prefer manual control over when syncing occurs, you can use the provided commands instead of observers:
+
+```bash
+# Sync all contacts from a specific model
+php artisan hubspot:sync-contacts App\Models\User
+
+# Sync with options
+php artisan hubspot:sync-contacts App\Models\User --delay=1 --limit=100
+```
+
+**Note**: Without observers, models will only sync when you explicitly run these commands.
 
 ### Sync Properties
 
@@ -135,7 +194,6 @@ composer test-coverage
 HUBSPOT_TEST_API_KEY=your_test_api_key_here
 HUBSPOT_DISABLED=false
 HUBSPOT_LOG_REQUESTS=true
-HUBSPOT_USE_REAL_API=false
 HUBSPOT_PROPERTY_GROUP=test_property_group
 HUBSPOT_QUEUE_ENABLED=false
 ```
@@ -158,24 +216,20 @@ Switch between mocked and real API calls:
 
 ```bash
 # Run with mocks (fast, no API calls)
-HUBSPOT_USE_REAL_API=false composer test
+HUBSPOT_DISABLED=true composer test
 
 # Run with real API calls (requires API key)
-HUBSPOT_USE_REAL_API=true composer test
+HUBSPOT_DISABLED=false composer test
 ```
 
-## Testing in Consuming Projects
+### Testing Documentation
 
 - **[Quick Start Guide](docs/QUICK_START_TESTING.md)** - Fast testing checklist
 - **[Comprehensive Testing Guide](docs/CONSUMING_PROJECT_TESTING.md)** - Detailed testing strategy
 
-### Quick Testing Steps
+## Upgrading
 
-1. **Clean test account**: `php scripts/clean-hubspot-test-account.php`
-2. **Configure your app**: Add traits to models and configure HubSpot settings
-3. **Sync properties**: `php artisan hubspot:sync-properties`
-4. **Test sync commands**: `php artisan hubspot:sync-contacts App\Models\User`
-5. **Test user registration**: Create users/companies and verify in HubSpot dashboard
+**⚠️ Upgrading from a previous version?** Please see the [Upgrade Guide](UPGRADE.md) for breaking changes and migration instructions.
 
 ## Changelog
 

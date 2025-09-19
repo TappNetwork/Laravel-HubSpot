@@ -60,10 +60,5 @@ beforeEach(function () {
 */
 
 // Add test mode information to output
-if (env('HUBSPOT_USE_REAL_API', false)) {
-    echo "\n🧪 Running tests with REAL HubSpot API calls\n";
-    echo "   Set HUBSPOT_USE_REAL_API=false to use mocks instead\n\n";
-} else {
-    echo "\n🧪 Running tests with MOCKED HubSpot API calls\n";
-    echo "   Set HUBSPOT_USE_REAL_API=true to use real API calls\n\n";
-}
+echo "\n🧪 Running tests with MOCKED HubSpot API calls\n";
+echo "   Set HUBSPOT_DISABLED=false and provide HUBSPOT_TEST_API_KEY to use real API calls\n\n";

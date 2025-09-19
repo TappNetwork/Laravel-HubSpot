@@ -2,6 +2,41 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.0.0 - 2025-01-XX
+
+### ⚠️ BREAKING CHANGES
+
+This is a major version release with significant breaking changes. Please review the migration guide in the README.
+
+### What's Changed
+
+#### Removed Deprecated Code
+- **Removed all synchronous methods** from `HubspotContact` and `HubspotCompany` traits
+- **Removed trait boot methods** that automatically handled model events
+- **Removed duplicate property conversion logic** from multiple classes
+- **Removed duplicate company search logic** from job classes
+
+#### Architecture Improvements
+- **Created `PropertyConverter` class** to consolidate property conversion logic
+- **Simplified trait architecture** - traits now only handle property mapping and data access
+- **Updated commands** to use services instead of deprecated trait methods
+- **Removed ~800-1000 lines** of deprecated and duplicate code
+
+#### New Requirements
+- **Models must implement `HubspotModelInterface`** for automatic sync
+- **Observers must be registered** in `AppServiceProvider` for automatic sync
+- **Use services directly** for programmatic API operations
+
+### Migration Required
+
+See the [Migration Guide](README.md#breaking-changes-in-v20) in the README for detailed upgrade instructions.
+
+### Benefits
+- **Cleaner architecture** with clear separation of concerns
+- **Better maintainability** with single source of truth for each responsibility
+- **Improved performance** with optimized property conversion
+- **Enhanced testability** with focused, single-purpose classes
+
 ## v1.1.4 - 2025-09-08
 
 ### What's Changed

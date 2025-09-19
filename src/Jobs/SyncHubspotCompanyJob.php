@@ -3,12 +3,11 @@
 namespace Tapp\LaravelHubspot\Jobs;
 
 use HubSpot\Client\Crm\Companies\ApiException;
-use HubSpot\Client\Crm\Companies\Model\Filter;
-use HubSpot\Client\Crm\Companies\Model\FilterGroup;
-use HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest as CompanySearch;
-use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyObject;
+use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyUpdateObject;
+use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate as CompanyCreateObject;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
+use Tapp\LaravelHubspot\Services\PropertyConverter;
 
 class SyncHubspotCompanyJob extends BaseHubspotJob
 {
@@ -51,23 +50,6 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
             $companyId = $this->extractCompanyId($hubspotCompany);
             $this->updateModelHubspotId($companyId);
         } catch (ApiException $e) {
-            // Handle 409 conflict (duplicate company name) by finding existing company
-            if ($e->getCode() === 409 && ! empty($this->modelData['name'])) {
-                Log::info('HubSpot company already exists, finding by name', [
-                    'name' => $this->modelData['name'],
-                    'error' => $e->getMessage(),
-                ]);
-
-                $company = $this->findCompanyByName($this->modelData['name']);
-                if ($company) {
-                    // Update the model with existing HubSpot ID
-                    $companyId = $this->extractCompanyId($company);
-                    $this->updateModelHubspotId($companyId);
-
-                    return;
-                }
-            }
-
             // Handle 400 bad request (validation errors)
             if ($e->getCode() === 400) {
                 Log::error('HubSpot API 400 error - company data validation failed', [
@@ -91,7 +73,7 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
             throw new \Exception('HubSpot ID missing. Cannot update company: '.($this->modelData['name'] ?? 'unknown'));
         }
 
-        $properties = $this->buildPropertiesObject($this->modelData['hubspotMap'] ?? []);
+        $properties = $this->buildUpdatePropertiesObject($this->modelData['hubspotMap'] ?? []);
 
         $hubspotCompany = Hubspot::crm()->companies()->basicApi()->update(
             $this->modelData['hubspot_id'],
@@ -111,7 +93,7 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
     {
         // If it's an Error object, throw an exception
         if (is_object($company) && get_class($company) === 'HubSpot\Client\Crm\Companies\Model\Error') {
-            throw new \Exception('HubSpot API returned an error: '.(method_exists($company, 'getMessage') ? $company->getMessage() : 'Unknown error'));
+            throw new \Exception('HubSpot API returned an error: '.$company->getMessage());
         }
 
         return $this->extractId($company);
@@ -120,15 +102,15 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
     /**
      * Build HubSpot properties object from model data.
      */
-    protected function buildPropertiesObject(array $map): CompanyObject
+    protected function buildPropertiesObject(array $map): CompanyCreateObject
     {
         $properties = [];
 
         foreach ($map as $hubspotProperty => $modelProperty) {
-            $value = $this->getNestedValue($this->modelData, $modelProperty);
+            $value = PropertyConverter::getNestedValue($this->modelData, $modelProperty);
 
             if ($value !== null) {
-                $convertedValue = $this->convertValueForHubspot($value, $hubspotProperty);
+                $convertedValue = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
                 if ($convertedValue !== null) {
                     $properties[$hubspotProperty] = $convertedValue;
                 }
@@ -136,52 +118,29 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
         }
 
         // Validate all properties are strings before creating the object
-        $this->validateHubspotProperties($properties);
+        PropertyConverter::validateHubspotProperties($properties);
 
-        return new CompanyObject(['properties' => $properties]);
+        return new CompanyCreateObject(['properties' => $properties]);
     }
 
     /**
-     * Find company by name.
+     * Build HubSpot properties object for update operations.
      */
-    protected function findCompanyByName(string $name): ?array
+    protected function buildUpdatePropertiesObject(array $map): CompanyUpdateObject
     {
-        try {
-            $filter = new Filter([
-                'value' => $name,
-                'property_name' => 'name',
-                'operator' => 'EQ',
-            ]);
+        $properties = [];
 
-            $filterGroup = new FilterGroup([
-                'filters' => [$filter],
-            ]);
+        foreach ($map as $hubspotProperty => $modelProperty) {
+            $value = PropertyConverter::getNestedValue($this->modelData, $modelProperty);
 
-            $companySearch = new CompanySearch([
-                'filter_groups' => [$filterGroup],
-            ]);
-
-            $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
-
-            if ($searchResults['total'] > 0) {
-                $result = $searchResults['results'][0];
-
-                // Convert object to array if needed
-                if (is_object($result)) {
-                    $result = [
-                        'id' => $result->getId(),
-                        'properties' => $result->getProperties() ?? [],
-                    ];
-                }
-
-                return $result;
-            }
-        } catch (ApiException $e) {
-            if ($e->getCode() !== 404) {
-                throw $e;
+            if ($value !== null) {
+                $properties[$hubspotProperty] = PropertyConverter::convertValueForHubspot($value, $hubspotProperty);
             }
         }
 
-        return null;
+        // Validate all properties are strings before creating the object
+        PropertyConverter::validateHubspotProperties($properties);
+
+        return new CompanyUpdateObject(['properties' => $properties]);
     }
 }
