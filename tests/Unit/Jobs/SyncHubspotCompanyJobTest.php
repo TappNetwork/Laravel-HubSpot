@@ -46,22 +46,17 @@ test('it skips execution when hubspot is disabled', function () {
 });
 
 test('it logs permanent failure', function () {
-    // Mock all Log methods to prevent unexpected calls
+    // Override the global Log mock to add specific expectation for error logging
     Log::shouldReceive('error')->once()->with(
         'HubSpot company sync job failed permanently',
         Mockery::any()
     );
-
-    // Allow other log methods to be called without expectations
-    Log::shouldReceive('channel')->andReturnSelf();
-    Log::shouldReceive('info')->andReturnSelf();
-    Log::shouldReceive('warning')->andReturnSelf();
-    Log::shouldReceive('debug')->andReturnSelf();
 
     $modelData = ['id' => 1, 'name' => 'Test Company'];
     $job = new SyncHubspotCompanyJob($modelData, 'create', 'TestModel');
 
     $exception = new \Exception('Test failure');
     $job->failed($exception);
+
     expect(true)->toBeTrue();
 });

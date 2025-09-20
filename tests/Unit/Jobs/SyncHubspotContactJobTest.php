@@ -65,6 +65,7 @@ test('it skips execution when hubspot is disabled', function () {
 test('it logs error when service fails', function () {
     test()->skipIfNoRealApi();
 
+    // Override the global Log mock to add specific expectation for error logging
     Log::shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed',
         Mockery::any()
@@ -84,6 +85,7 @@ test('it logs error when service fails', function () {
 test('it logs permanent failure', function () {
     test()->skipIfNoRealApi();
 
+    // Override the global Log mock to add specific expectation for error logging
     Log::shouldReceive('error')->once()->with(
         'HubSpot contact sync job failed permanently',
         Mockery::any()
