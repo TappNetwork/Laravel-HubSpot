@@ -79,8 +79,6 @@ trait HubspotContact
      * Dispatch a job to sync this model to HubSpot.
      * This bypasses all change detection checks and forces a sync.
      * This is useful when you need to manually trigger a sync (e.g., when accessors change).
-     *
-     * @return void
      */
     public function syncToHubSpot(): void
     {
