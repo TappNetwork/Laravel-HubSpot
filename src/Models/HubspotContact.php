@@ -76,6 +76,24 @@ trait HubspotContact
     }
 
     /**
+     * Dispatch a job to sync this model to HubSpot.
+     * This bypasses all change detection checks and forces a sync.
+     * This is useful when you need to manually trigger a sync (e.g., when accessors change).
+     *
+     * @return void
+     */
+    public function syncToHubSpot(): void
+    {
+        if (config('hubspot.disabled', false)) {
+            return;
+        }
+
+        $observer = new \Tapp\LaravelHubspot\Observers\HubspotContactObserver;
+        $operation = ! empty($this->getHubspotId()) ? 'update' : 'create';
+        $observer->dispatchSyncJob($this, $operation);
+    }
+
+    /**
      * Update or create a HubSpot contact for this model.
      *
      * This method provides backward compatibility for the removed updateOrCreateHubspotContact method.

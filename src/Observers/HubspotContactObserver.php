@@ -83,7 +83,7 @@ class HubspotContactObserver
     /**
      * Dispatch the sync job.
      */
-    protected function dispatchSyncJob(Model $model, string $operation): void
+    public function dispatchSyncJob(Model $model, string $operation): void
     {
         if (! config('hubspot.queue.enabled', true)) {
             // For synchronous operation, you could call a service here
