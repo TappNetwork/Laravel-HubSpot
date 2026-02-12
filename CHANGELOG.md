@@ -2,6 +2,15 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.0.2 - 2026-02-12
+
+### What's Changed
+
+* Bump dependabot/fetch-metadata from 2.4.0 to 2.5.0 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/34
+* Fix existing contact handling: find by email via Search API by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/35
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.0.1...v2.0.2
+
 ## v2.0.1 - 2025-11-05
 
 ### What's Changed
