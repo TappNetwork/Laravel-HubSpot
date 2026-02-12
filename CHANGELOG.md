@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.0.3 - 2026-02-12
+
+### What's Changed
+
+* Remove version from composer.json to avoid tag mismatch by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/36
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.0.2...v2.0.3
+
 ## v2.0.2 - 2026-02-12
 
 ### What's Changed
