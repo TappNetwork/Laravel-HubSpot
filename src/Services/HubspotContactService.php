@@ -3,6 +3,9 @@
 namespace Tapp\LaravelHubspot\Services;
 
 use HubSpot\Client\Crm\Contacts\ApiException;
+use HubSpot\Client\Crm\Contacts\Model\Filter as ContactFilter;
+use HubSpot\Client\Crm\Contacts\Model\FilterGroup as ContactFilterGroup;
+use HubSpot\Client\Crm\Contacts\Model\PublicObjectSearchRequest as ContactSearchRequest;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput as ContactUpdateObject;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactCreateObject;
 use Illuminate\Database\Eloquent\Model;
@@ -78,9 +81,9 @@ class HubspotContactService
 
             throw $e;
         } catch (\Exception $e) {
-            // Handle "Contact already exists" error that might not be an ApiException
+            // Handle "contact already exists" error (API may return "A contact with email X already exists")
             $emailField = $this->getMappedEmailField($data);
-            if (str_contains($e->getMessage(), 'Contact already exists') && $emailField) {
+            if ($emailField && str_contains(strtolower($e->getMessage()), 'already exists')) {
                 Log::info('HubSpot contact already exists, finding by email', [
                     'email' => $emailField,
                     'error' => $e->getMessage(),
@@ -229,26 +232,64 @@ class HubspotContactService
             }
         }
 
-        // Use the mapped email field from hubspotMap instead of data['email'] directly
+        // Find contact by email using the Search API (getById does not accept email)
         $emailField = $this->getMappedEmailField($data);
         if ($emailField) {
-            try {
-                $contact = Hubspot::crm()->contacts()->basicApi()->getById($emailField, null, null, null, false, 'email');
+            $contact = $this->findContactByEmail($emailField, $data);
+            if ($contact !== null) {
+                return $contact;
+            }
+        }
 
-                // Check if response is an Error object
-                if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
-                    throw new \Exception('HubSpot API returned an error: '.$contact->getMessage());
-                }
+        return null;
+    }
 
-                // Update the model with HubSpot ID
+    /**
+     * Find a contact by email using the HubSpot Search API.
+     * Updates the local model with the HubSpot ID when found.
+     */
+    protected function findContactByEmail(string $email, array $data): ?array
+    {
+        try {
+            $filter = new ContactFilter;
+            $filter->setOperator('EQ')->setPropertyName('email')->setValue($email);
+            $filterGroup = new ContactFilterGroup;
+            $filterGroup->setFilters([$filter]);
+            $searchRequest = new ContactSearchRequest;
+            $searchRequest->setFilterGroups([$filterGroup]);
+            $searchRequest->setProperties(['email', 'firstname', 'lastname']);
+
+            $searchResults = Hubspot::crm()->contacts()->searchApi()->doSearch($searchRequest);
+
+            if ($searchResults instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+                Log::warning('HubSpot contact search returned error', [
+                    'email' => $email,
+                    'error' => $searchResults->getMessage(),
+                ]);
+
+                return null;
+            }
+
+            if ($searchResults->getTotal() > 0) {
+                $results = $searchResults->getResults();
+                $contact = $results[0];
                 $contactId = $contact->getId();
-                $this->updateModelHubspotId($data['id'] ?? null, $contactId, $data['modelClass'] ?? null);
+                $this->updateModelHubspotId($data['id'] ?? null, (string) $contactId, $data['modelClass'] ?? null);
+
+                Log::info('Found existing HubSpot contact by email', [
+                    'email' => $email,
+                    'hubspot_id' => $contactId,
+                ]);
 
                 return $this->normalizeContactResponse($contact);
-            } catch (ApiException $e) {
-                if ($e->getCode() !== 404) {
-                    throw $e;
-                }
+            }
+        } catch (ApiException $e) {
+            if ($e->getCode() !== 404) {
+                Log::warning('HubSpot contact search failed', [
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
             }
         }
 
