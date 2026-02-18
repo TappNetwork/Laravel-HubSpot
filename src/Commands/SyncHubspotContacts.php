@@ -3,6 +3,7 @@
 namespace Tapp\LaravelHubspot\Commands;
 
 use Illuminate\Console\Command;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
 class SyncHubspotContacts extends Command
@@ -70,6 +71,10 @@ class SyncHubspotContacts extends Command
 
         // Process contacts
         foreach ($contacts as $contact) {
+            if (! $contact instanceof HubspotModelInterface) {
+                continue;
+            }
+
             try {
                 // Prepare data for the service
                 $data = $this->prepareContactData($contact);
