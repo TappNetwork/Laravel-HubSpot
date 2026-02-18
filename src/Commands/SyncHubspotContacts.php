@@ -127,7 +127,7 @@ class SyncHubspotContacts extends Command
         $data = $contact->toArray();
 
         // Service expects hubspot_id and modelClass; use getHubspotId() so custom column (e.g. hubspot_contact_id) is respected
-        $data['hubspot_id'] = method_exists($contact, 'getHubspotId') ? $contact->getHubspotId() : ($data['hubspot_id'] ?? null);
+        $data['hubspot_id'] = $contact instanceof HubspotModelInterface ? $contact->getHubspotId() : ($data['hubspot_id'] ?? null);
         $data['id'] = $contact->getKey();
         $data['modelClass'] = get_class($contact);
 

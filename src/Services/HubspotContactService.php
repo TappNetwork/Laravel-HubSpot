@@ -462,6 +462,7 @@ class HubspotContactService
             return;
         }
 
+        /** @var \Illuminate\Database\Eloquent\Model|null $model */
         $model = $modelClass::find($modelId);
         if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
             $model->setHubspotId($hubspotId);
@@ -588,6 +589,7 @@ class HubspotContactService
         $companyModelClass = str_replace('User', 'Agency', $modelClass);
 
         if (class_exists($companyModelClass)) {
+            /** @var \Illuminate\Database\Eloquent\Model|null $company */
             $company = $companyModelClass::find($modelId);
             if ($company instanceof Model && method_exists($company, 'setHubspotId')) {
                 $company->setHubspotId($hubspotId);
