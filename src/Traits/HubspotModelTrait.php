@@ -37,11 +37,22 @@ trait HubspotModelTrait
     }
 
     /**
+     * Column name for the HubSpot ID on this model. Override in HubspotCompany to use company_id_column.
+     */
+    protected function getHubspotIdColumn(): string
+    {
+        return config('hubspot.contact_id_column', 'hubspot_id');
+    }
+
+    /**
      * Get the HubSpot ID for this model.
+     * Uses getHubspotIdColumn() so projects can configure column name (e.g. hubspot_contact_id).
      */
     public function getHubspotId(): ?string
     {
-        return $this->hubspot_id ?? null;
+        $value = $this->getAttribute($this->getHubspotIdColumn());
+
+        return $value !== null ? (string) $value : null;
     }
 
     /**
@@ -49,6 +60,6 @@ trait HubspotModelTrait
      */
     public function setHubspotId(?string $hubspotId): void
     {
-        $this->hubspot_id = $hubspotId;
+        $this->setAttribute($this->getHubspotIdColumn(), $hubspotId);
     }
 }

@@ -8,6 +8,10 @@ return [
     'property_group' => env('HUBSPOT_PROPERTY_GROUP', 'app_user_profile'),
     'property_group_label' => env('HUBSPOT_PROPERTY_GROUP_LABEL', 'App User Profile'),
 
+    // Column name on the model for storing the HubSpot contact/company ID (e.g. hubspot_id or hubspot_contact_id)
+    'contact_id_column' => env('HUBSPOT_CONTACT_ID_COLUMN', 'hubspot_id'),
+    'company_id_column' => env('HUBSPOT_COMPANY_ID_COLUMN', 'hubspot_id'),
+
     // Queue configuration
     'queue' => [
         'enabled' => env('HUBSPOT_QUEUE_ENABLED', true),

@@ -74,7 +74,7 @@ class SyncHubspotContacts extends Command
                 // Prepare data for the service
                 $data = $this->prepareContactData($contact);
 
-                if ($contact->getAttribute('hubspot_id')) {
+                if ($contact->getHubspotId()) {
                     $service->updateContact($data);
                 } else {
                     $service->createContact($data, get_class($contact));

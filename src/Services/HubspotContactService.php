@@ -457,8 +457,9 @@ class HubspotContactService
         }
 
         $model = $modelClass::find($modelId);
-        if ($model) {
-            $model->update(['hubspot_id' => $hubspotId]);
+        if ($model && method_exists($model, 'setHubspotId')) {
+            $model->setHubspotId($hubspotId);
+            $model->save();
         }
     }
 
@@ -582,8 +583,9 @@ class HubspotContactService
 
         if (class_exists($companyModelClass)) {
             $company = $companyModelClass::find($modelId);
-            if ($company) {
-                $company->update(['hubspot_id' => $hubspotId]);
+            if ($company && method_exists($company, 'setHubspotId')) {
+                $company->setHubspotId($hubspotId);
+                $company->save();
             }
         }
     }
