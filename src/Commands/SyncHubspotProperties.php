@@ -62,14 +62,17 @@ class SyncHubspotProperties extends Command
 
         $allHubspotProperties = collect($response->getResults())->pluck('name');
 
-        // Use the hubspotMap to get the property keys, plus any dynamic properties
+        // Use the hubspotMap to get the property keys, plus any dynamic properties from
+        // hubspotProperties() and getHubspotProperties() so projects only need to override
+        // getHubspotProperties() for dynamic keys to be discovered and created in HubSpot.
         $modelInstance = new $model;
-        $syncProperties = array_keys($modelInstance->getHubspotMap());
-
-        // Add dynamic properties from hubspotProperties method
-        $dynamicProperties = $modelInstance->hubspotProperties($modelInstance->getHubspotMap());
-        $dynamicPropertyKeys = array_keys($dynamicProperties);
-        $syncProperties = array_unique(array_merge($syncProperties, $dynamicPropertyKeys));
+        $map = $modelInstance->getHubspotMap();
+        $syncProperties = array_keys($map);
+        $syncProperties = array_unique(array_merge(
+            $syncProperties,
+            array_keys($modelInstance->hubspotProperties($map)),
+            array_keys($modelInstance->getHubspotProperties($map))
+        ));
 
         // Only show HubSpot properties that are relevant to our sync
         $relevantHubspotProperties = $allHubspotProperties->intersect($syncProperties);
