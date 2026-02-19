@@ -4,6 +4,7 @@ namespace Tapp\LaravelHubspot\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -114,9 +115,11 @@ abstract class BaseHubspotJob implements ShouldQueue
             return;
         }
 
+        /** @var \Illuminate\Database\Eloquent\Model|null $model */
         $model = $this->modelClass::find($this->modelData['id'] ?? null);
-        if ($model) {
-            $model->update(['hubspot_id' => $hubspotId]);
+        if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
+            $model->setHubspotId($hubspotId);
+            $model->save();
         }
     }
 

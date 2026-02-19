@@ -86,31 +86,27 @@ class Company extends Model implements HubspotModelInterface
 
 ### Dynamic Properties
 
-Override the `hubspotProperties` method for computed values using trait aliasing:
+Override `getHubspotProperties()` to add dynamic or computed properties. The `hubspot:sync-properties` command discovers property keys from your map, `hubspotProperties()`, and `getHubspotProperties()`, so you only need to override this method for your dynamic keys to be created in HubSpot.
 
 ```php
-use Tapp\LaravelHubspot\Models\HubspotContact {
-    hubspotProperties as traitHubspotProperties;
-}
-
 class User extends Authenticatable implements HubspotModelInterface
 {
     use HubspotContact;
 
-    public function hubspotProperties(array $map): array
+    public function getHubspotProperties(array $map): array
     {
-        // Get the base properties from the trait
-        $properties = $this->traitHubspotProperties($map);
-        
-        // Add computed properties
-        $properties['full_name'] = $this->first_name . ' ' . $this->last_name;
-        $properties['display_name'] = $this->getDisplayName();
-        $properties['account_age_days'] = $this->created_at->diffInDays(now());
-
-        return $properties;
+        return [
+            'full_name' => $this->first_name . ' ' . $this->last_name,
+            'display_name' => $this->getDisplayName(),
+            'account_age_days' => $this->created_at->diffInDays(now()),
+        ];
     }
 }
 ```
+
+When the model has no id (e.g. `hubspot:sync-properties` uses `new User()` to discover keys), return the same keys with `null` values so the command can build the full list without running user-specific queries.
+
+If you need to customize the full property set (e.g. computed values that replace or extend map-based properties), you can instead override `hubspotProperties()` using trait aliasing: alias the trait method (e.g. `hubspotProperties as traitHubspotProperties`), call `$this->traitHubspotProperties($map)`, merge your properties, and return.
 
 ### Observers (Required for Automatic Sync)
 

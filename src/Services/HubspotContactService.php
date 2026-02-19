@@ -116,7 +116,10 @@ class HubspotContactService
     public function updateContact(array $data): array
     {
         if (empty($data['hubspot_id'])) {
-            throw new \Exception('HubSpot ID missing. Cannot update contact: '.($data['email'] ?? 'unknown'));
+            throw new \Exception(
+                'HubSpot ID missing in model. Cannot update contact: '.($data['email'] ?? 'unknown').
+                ' The model has no HubSpot ID (e.g. '.config('hubspot.contact_id_column', 'hubspot_id').') set.'
+            );
         }
 
         // Validate that the contact exists in HubSpot before attempting update
@@ -135,7 +138,10 @@ class HubspotContactService
                     return $this->createContact($data, $data['modelClass'] ?? '');
                 }
             } else {
-                throw new \Exception('Invalid HubSpot ID and no email provided for contact: '.($data['email'] ?? 'unknown'));
+                throw new \Exception(
+                    'Cannot find id in HubSpot. Contact ID '.$data['hubspot_id'].
+                    ' does not exist in this HubSpot account and no email provided for lookup: '.($data['email'] ?? 'unknown')
+                );
             }
         }
 
@@ -456,9 +462,11 @@ class HubspotContactService
             return;
         }
 
+        /** @var \Illuminate\Database\Eloquent\Model|null $model */
         $model = $modelClass::find($modelId);
-        if ($model) {
-            $model->update(['hubspot_id' => $hubspotId]);
+        if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
+            $model->setHubspotId($hubspotId);
+            $model->save();
         }
     }
 
@@ -581,9 +589,11 @@ class HubspotContactService
         $companyModelClass = str_replace('User', 'Agency', $modelClass);
 
         if (class_exists($companyModelClass)) {
+            /** @var \Illuminate\Database\Eloquent\Model|null $company */
             $company = $companyModelClass::find($modelId);
-            if ($company) {
-                $company->update(['hubspot_id' => $hubspotId]);
+            if ($company instanceof Model && method_exists($company, 'setHubspotId')) {
+                $company->setHubspotId($hubspotId);
+                $company->save();
             }
         }
     }

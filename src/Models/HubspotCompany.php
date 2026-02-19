@@ -10,6 +10,11 @@ trait HubspotCompany
 {
     use HubspotModelTrait;
 
+    protected function getHubspotIdColumn(): string
+    {
+        return config('hubspot.company_id_column', 'hubspot_id');
+    }
+
     /**
      * Get properties to be synced with hubspot
      */

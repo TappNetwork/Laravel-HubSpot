@@ -50,6 +50,11 @@ class CompanyObserverTestModel extends \Illuminate\Database\Eloquent\Model imple
     {
         $this->hubspot_id = $hubspotId;
     }
+
+    protected function getHubspotIdColumn(): string
+    {
+        return 'hubspot_id';
+    }
 }
 
 beforeEach(function () {
