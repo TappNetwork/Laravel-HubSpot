@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.0.4 - 2026-02-19
+
+### What's Changed
+
+* Configurable HubSpot ID column name for contacts and companies by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/37
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.0.3...v2.0.4
+
 ## v2.0.3 - 2026-02-12
 
 ### What's Changed
