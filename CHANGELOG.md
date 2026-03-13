@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.0.5 - 2026-03-13
+
+### What's Changed
+
+* Handle BackedEnum and UnitEnum in PropertyConverter by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/39
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.0.4...v2.0.5
+
 ## v2.0.4 - 2026-02-19
 
 ### What's Changed
