@@ -1,6 +1,7 @@
 <?php
 
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
@@ -22,13 +23,13 @@ test('it builds properties object correctly', function () {
     ];
 
     // Use reflection to test protected method
-    $reflection = new \ReflectionClass($this->service);
+    $reflection = new ReflectionClass($this->service);
     $method = $reflection->getMethod('buildPropertiesObject');
     $method->setAccessible(true);
 
     $properties = $method->invoke($this->service, $map, $data);
 
-    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate::class);
+    expect($properties)->toBeInstanceOf(SimplePublicObjectInputForCreate::class);
     expect($properties->getProperties()['email'])->toBe('test@example.com');
     expect($properties->getProperties()['firstname'])->toBe('John');
     expect($properties->getProperties()['lastname'])->toBe('Doe');
@@ -54,13 +55,13 @@ test('it handles dynamic properties in data array', function () {
     ];
 
     // Use reflection to test protected method
-    $reflection = new \ReflectionClass($this->service);
+    $reflection = new ReflectionClass($this->service);
     $method = $reflection->getMethod('buildPropertiesObject');
     $method->setAccessible(true);
 
     $properties = $method->invoke($this->service, $map, $data);
 
-    expect($properties)->toBeInstanceOf(\HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate::class);
+    expect($properties)->toBeInstanceOf(SimplePublicObjectInputForCreate::class);
 
     // Check mapped properties
     expect($properties->getProperties()['email'])->toBe('test@example.com');
@@ -169,7 +170,7 @@ test('it skips execution when hubspot is disabled', function () {
     ];
 
     expect(fn () => $this->service->createContact($data, 'TestModel'))
-        ->toThrow(\Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
+        ->toThrow(Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
 });
 
 test('it skips execution when no api key is configured', function () {
@@ -188,5 +189,5 @@ test('it skips execution when no api key is configured', function () {
     ];
 
     expect(fn () => $this->service->createContact($data, 'TestModel'))
-        ->toThrow(\Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
+        ->toThrow(Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
 });

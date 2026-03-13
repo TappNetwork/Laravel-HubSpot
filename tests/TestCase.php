@@ -4,13 +4,14 @@ namespace Tapp\LaravelHubspot\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Testing\TestResponse;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Tapp\LaravelHubspot\LaravelHubspotServiceProvider;
 
 class TestCase extends Orchestra
 {
     /**
-     * @var \Illuminate\Testing\TestResponse|null
+     * @var TestResponse|null
      */
     public static $latestResponse;
 

@@ -111,7 +111,7 @@ test('updateOrCreateHubspotContact falls back to createContact when updateContac
     $mockService->shouldReceive('updateContact')
         ->once()
         ->with(Mockery::type('array'))
-        ->andThrow(new \Exception('Update failed'));
+        ->andThrow(new Exception('Update failed'));
 
     $mockService->shouldReceive('createContact')
         ->once()

@@ -3,6 +3,10 @@
 namespace Tapp\LaravelHubspot\Models;
 
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactObject;
+use Illuminate\Support\Facades\Log;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
+use Tapp\LaravelHubspot\Services\HubspotContactService;
 use Tapp\LaravelHubspot\Services\PropertyConverter;
 use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
@@ -86,7 +90,7 @@ trait HubspotContact
             return;
         }
 
-        $observer = new \Tapp\LaravelHubspot\Observers\HubspotContactObserver;
+        $observer = new HubspotContactObserver;
         $operation = ! empty($this->getHubspotId()) ? 'update' : 'create';
         $observer->dispatchSyncJob($this, $operation);
     }
@@ -103,7 +107,7 @@ trait HubspotContact
      */
     public function updateOrCreateHubspotContact(): array
     {
-        $service = app(\Tapp\LaravelHubspot\Services\HubspotContactService::class);
+        $service = app(HubspotContactService::class);
 
         $data = [
             'id' => $this->getKey(),
@@ -131,7 +135,7 @@ trait HubspotContact
             if ($company) {
                 $data['hubspotCompanyRelation'] = [
                     'id' => $company->getKey(),
-                    'hubspot_id' => $company instanceof \Tapp\LaravelHubspot\Contracts\HubspotModelInterface ? $company->getHubspotId() : ($company->hubspot_id ?? null),
+                    'hubspot_id' => $company instanceof HubspotModelInterface ? $company->getHubspotId() : ($company->hubspot_id ?? null),
                     'name' => $company->name ?? $company->getAttribute('name'),
                 ];
             }
@@ -143,7 +147,7 @@ trait HubspotContact
                 return $service->updateContact($data);
             } catch (\Exception $e) {
                 // If update fails (e.g., invalid hubspot_id), try to create instead
-                \Illuminate\Support\Facades\Log::info('Update failed, attempting to create contact', [
+                Log::info('Update failed, attempting to create contact', [
                     'model_id' => $this->getKey(),
                     'hubspot_id' => $this->getHubspotId(),
                     'error' => $e->getMessage(),

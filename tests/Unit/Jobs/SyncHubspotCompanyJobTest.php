@@ -1,12 +1,13 @@
 <?php
 
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotCompanyJob;
 
 test('it extends queue job', function () {
     $job = new SyncHubspotCompanyJob([], 'create', 'TestModel');
 
-    expect($job)->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
+    expect($job)->toBeInstanceOf(ShouldQueue::class);
 });
 
 test('it has correct properties', function () {
@@ -55,7 +56,7 @@ test('it logs permanent failure', function () {
     $modelData = ['id' => 1, 'name' => 'Test Company'];
     $job = new SyncHubspotCompanyJob($modelData, 'create', 'TestModel');
 
-    $exception = new \Exception('Test failure');
+    $exception = new Exception('Test failure');
     $job->failed($exception);
 
     expect(true)->toBeTrue();

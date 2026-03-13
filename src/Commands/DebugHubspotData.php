@@ -2,7 +2,9 @@
 
 namespace Tapp\LaravelHubspot\Commands;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 
 class DebugHubspotData extends Command
 {
@@ -25,7 +27,7 @@ class DebugHubspotData extends Command
      */
     public function handle(): int
     {
-        /** @var class-string<\Illuminate\Database\Eloquent\Model> $contactModel */
+        /** @var class-string<Model> $contactModel */
         $contactModel = $this->argument('model');
         $email = $this->option('email');
 
@@ -119,7 +121,7 @@ class DebugHubspotData extends Command
             }
 
             // Convert data types to strings for HubSpot API
-            if ($propertyValue instanceof \Carbon\Carbon) {
+            if ($propertyValue instanceof Carbon) {
                 $properties[$key] = $propertyValue->toISOString();
             } elseif (is_array($propertyValue)) {
                 if (empty($propertyValue)) {

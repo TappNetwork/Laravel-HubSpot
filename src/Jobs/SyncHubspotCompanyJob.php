@@ -3,6 +3,7 @@
 namespace Tapp\LaravelHubspot\Jobs;
 
 use HubSpot\Client\Crm\Companies\ApiException;
+use HubSpot\Client\Crm\Companies\Model\Error;
 use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInput as CompanyUpdateObject;
 use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate as CompanyCreateObject;
 use Illuminate\Support\Facades\Log;
@@ -42,7 +43,7 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
             $hubspotCompany = Hubspot::crm()->companies()->basicApi()->create($properties);
 
             // Check if response is an Error object
-            if ($hubspotCompany instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+            if ($hubspotCompany instanceof Error) {
                 throw new \Exception('HubSpot API returned an error: '.$hubspotCompany->getMessage());
             }
 
@@ -84,7 +85,7 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
         );
 
         // Check if response is an Error object
-        if ($hubspotCompany instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+        if ($hubspotCompany instanceof Error) {
             throw new \Exception('HubSpot API returned an error: '.$hubspotCompany->getMessage());
         }
     }

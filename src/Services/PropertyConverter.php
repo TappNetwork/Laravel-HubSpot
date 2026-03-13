@@ -2,6 +2,8 @@
 
 namespace Tapp\LaravelHubspot\Services;
 
+use Carbon\Carbon;
+
 class PropertyConverter
 {
     /**
@@ -11,7 +13,7 @@ class PropertyConverter
     {
         if (is_null($value)) {
             return null;
-        } elseif ($value instanceof \Carbon\Carbon) {
+        } elseif ($value instanceof Carbon) {
             return $value->toISOString();
         } elseif (is_array($value)) {
             if (empty($value)) {
@@ -31,6 +33,10 @@ class PropertyConverter
 
             // Handle regular indexed arrays
             return implode(', ', array_filter($value, 'is_scalar'));
+        } elseif ($value instanceof \BackedEnum) {
+            return (string) $value->value;
+        } elseif ($value instanceof \UnitEnum) {
+            return $value->name;
         } elseif (is_object($value)) {
             if (method_exists($value, '__toString')) {
                 return (string) $value;

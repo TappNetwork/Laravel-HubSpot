@@ -79,7 +79,7 @@ test('it logs error when service fails', function () {
 
     $job = new SyncHubspotContactJob($modelData, 'create', 'TestModel');
 
-    expect(fn () => $job->handle())->toThrow(\Exception::class);
+    expect(fn () => $job->handle())->toThrow(Exception::class);
 });
 
 test('it logs permanent failure', function () {
@@ -99,7 +99,7 @@ test('it logs permanent failure', function () {
 
     $job = new SyncHubspotContactJob($modelData, 'create', 'TestModel');
 
-    expect(fn () => $job->failed(new \Exception('Test failure')))->not->toThrow();
+    expect(fn () => $job->failed(new Exception('Test failure')))->not->toThrow();
 });
 
 test('it handles delete operation', function () {
@@ -125,5 +125,5 @@ test('it skips execution when no api key is configured', function () {
     $modelData = ['id' => 1, 'email' => 'test@example.com'];
     $job = new SyncHubspotContactJob($modelData, 'create', 'TestModel');
 
-    expect(fn () => $job->handle())->toThrow(\Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
+    expect(fn () => $job->handle())->toThrow(Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
 });

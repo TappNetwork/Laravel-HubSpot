@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Utils;
+use Illuminate\Support\Facades\Log;
 use Psr\Http\Message\RequestInterface;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -39,7 +40,7 @@ class LaravelHubspotServiceProvider extends PackageServiceProvider
             // Only initialize HubSpot client if API key is provided and not disabled
             if (! config('hubspot.api_key') || config('hubspot.disabled')) {
                 // Return a mock object that throws an exception when used
-                return new \Tapp\LaravelHubspot\MockHubspotClient;
+                return new MockHubspotClient;
             }
 
             $stack = new HandlerStack;
@@ -47,7 +48,7 @@ class LaravelHubspotServiceProvider extends PackageServiceProvider
 
             $stack->push(Middleware::mapRequest(function (RequestInterface $r) {
                 if (config('hubspot.log_requests')) {
-                    \Illuminate\Support\Facades\Log::info('Hubspot Request: '.$r->getMethod().' '.$r->getUri());
+                    Log::info('Hubspot Request: '.$r->getMethod().' '.$r->getUri());
                 }
 
                 return $r;

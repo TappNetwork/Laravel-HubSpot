@@ -135,7 +135,7 @@ test('it includes dynamic properties from overridden hubspot properties method',
     $testModel->last_name = 'Doe';
 
     // Use reflection to test the protected method
-    $reflection = new \ReflectionClass($this->observer);
+    $reflection = new ReflectionClass($this->observer);
     $method = $reflection->getMethod('prepareJobData');
     $method->setAccessible(true);
 
