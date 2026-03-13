@@ -115,7 +115,7 @@ abstract class BaseHubspotJob implements ShouldQueue
             return;
         }
 
-        /** @var \Illuminate\Database\Eloquent\Model|null $model */
+        /** @var Model|null $model */
         $model = $this->modelClass::find($this->modelData['id'] ?? null);
         if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
             $model->setHubspotId($hubspotId);

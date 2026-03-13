@@ -92,7 +92,7 @@ test('throws for object without toString or toArray', function () {
     $obj = new stdClass;
 
     PropertyConverter::convertValueForHubspot($obj, 'bad_field');
-})->throws(\InvalidArgumentException::class);
+})->throws(InvalidArgumentException::class);
 
 test('converts plain string as-is', function () {
     $result = PropertyConverter::convertValueForHubspot('hello', 'name');

@@ -1,10 +1,11 @@
 <?php
 
+use Illuminate\Console\Command;
 use Tapp\LaravelHubspot\Commands\SyncHubspotContacts;
 
 test('it has correct signature', function () {
     $command = new SyncHubspotContacts;
-    $reflection = new \ReflectionClass($command);
+    $reflection = new ReflectionClass($command);
     $signatureProperty = $reflection->getProperty('signature');
     $signatureProperty->setAccessible(true);
 
@@ -15,7 +16,7 @@ test('it has correct signature', function () {
 
 test('it has correct description', function () {
     $command = new SyncHubspotContacts;
-    $reflection = new \ReflectionClass($command);
+    $reflection = new ReflectionClass($command);
     $descriptionProperty = $reflection->getProperty('description');
     $descriptionProperty->setAccessible(true);
 
@@ -24,7 +25,7 @@ test('it has correct description', function () {
 
 test('it has correct default options', function () {
     $command = new SyncHubspotContacts;
-    $reflection = new \ReflectionClass($command);
+    $reflection = new ReflectionClass($command);
     $signatureProperty = $reflection->getProperty('signature');
     $signatureProperty->setAccessible(true);
     $signature = $signatureProperty->getValue($command);
@@ -37,5 +38,5 @@ test('it has correct default options', function () {
 test('it extends console command', function () {
     $command = new SyncHubspotContacts;
 
-    expect($command)->toBeInstanceOf(\Illuminate\Console\Command::class);
+    expect($command)->toBeInstanceOf(Command::class);
 });

@@ -1,5 +1,8 @@
 <?php
 
+use HubSpot\Client\Crm\Contacts\Model\PublicObjectSearchRequest;
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput;
+use Illuminate\Database\Eloquent\Model;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 
 beforeEach(function () {
@@ -18,7 +21,7 @@ test('it can connect to hubspot api', function () {
             'lastname' => 'Connection',
         ];
 
-        $contactObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $properties]);
+        $contactObject = new SimplePublicObjectInput(['properties' => $properties]);
         $result = Hubspot::crm()->contacts()->basicApi()->create($contactObject);
 
         expect($result)->not->toBeEmpty();
@@ -27,7 +30,7 @@ test('it can connect to hubspot api', function () {
         $contactId = is_array($result) ? $result['id'] : $result->getId();
         $this->cleanupTestContact($contactId);
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         test()->fail('Failed to connect to HubSpot API: '.$e->getMessage());
     }
 });
@@ -47,7 +50,7 @@ test('it can create contact via service', function () {
             'lastname' => $testData['last_name'],
         ];
 
-        $contactObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $properties]);
+        $contactObject = new SimplePublicObjectInput(['properties' => $properties]);
         $result = Hubspot::crm()->contacts()->basicApi()->create($contactObject);
 
         // Handle both array and object responses
@@ -60,7 +63,7 @@ test('it can create contact via service', function () {
         // Clean up - delete the test contact
         $this->cleanupTestContact($contactId);
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         test()->fail('Failed to create contact: '.$e->getMessage());
     }
 });
@@ -89,7 +92,7 @@ test('it can create company via trait', function () {
         // Clean up - delete the test company
         $this->cleanupTestCompany($companyId);
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         test()->fail('Failed to create company: '.$e->getMessage());
     }
 });
@@ -105,12 +108,12 @@ test('it can find contact by email', function () {
             'lastname' => 'Search',
         ];
 
-        $contactObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $properties]);
+        $contactObject = new SimplePublicObjectInput(['properties' => $properties]);
         $createdContact = Hubspot::crm()->contacts()->basicApi()->create($contactObject);
         $contactId = is_array($createdContact) ? $createdContact['id'] : $createdContact->getId();
 
         // Now search for it
-        $searchRequest = new \HubSpot\Client\Crm\Contacts\Model\PublicObjectSearchRequest([
+        $searchRequest = new PublicObjectSearchRequest([
             'filterGroups' => [
                 [
                     'filters' => [
@@ -132,7 +135,7 @@ test('it can find contact by email', function () {
         // Clean up
         $this->cleanupTestContact($contactId);
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         test()->fail('Failed to find contact by email: '.$e->getMessage());
     }
 });
@@ -148,7 +151,7 @@ test('it can update contact properties', function () {
             'lastname' => 'Name',
         ];
 
-        $contactObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $properties]);
+        $contactObject = new SimplePublicObjectInput(['properties' => $properties]);
         $createdContact = Hubspot::crm()->contacts()->basicApi()->create($contactObject);
         $contactId = is_array($createdContact) ? $createdContact['id'] : $createdContact->getId();
 
@@ -158,7 +161,7 @@ test('it can update contact properties', function () {
             'lastname' => 'Name',
         ];
 
-        $updateObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $updateProperties]);
+        $updateObject = new SimplePublicObjectInput(['properties' => $updateProperties]);
         $updatedContact = Hubspot::crm()->contacts()->basicApi()->update($contactId, $updateObject);
 
         $updatedProperties = is_array($updatedContact) ? $updatedContact['properties'] : $updatedContact->getProperties();
@@ -169,7 +172,7 @@ test('it can update contact properties', function () {
         // Clean up
         $this->cleanupTestContact($contactId);
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         test()->fail('Failed to update contact: '.$e->getMessage());
     }
 });
@@ -185,7 +188,7 @@ test('it can delete contact', function () {
             'lastname' => 'Delete',
         ];
 
-        $contactObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $properties]);
+        $contactObject = new SimplePublicObjectInput(['properties' => $properties]);
         $createdContact = Hubspot::crm()->contacts()->basicApi()->create($contactObject);
         $contactId = is_array($createdContact) ? $createdContact['id'] : $createdContact->getId();
 
@@ -196,12 +199,12 @@ test('it can delete contact', function () {
         try {
             Hubspot::crm()->contacts()->basicApi()->getById($contactId);
             test()->fail('Contact should have been deleted');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Expected - contact should not exist
             expect($e->getMessage())->toContain('404');
         }
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         test()->fail('Failed to delete contact: '.$e->getMessage());
     }
 });
@@ -217,12 +220,12 @@ test('it handles invalid api key gracefully', function () {
             'lastname' => 'User',
         ];
 
-        $contactObject = new \HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInput(['properties' => $properties]);
+        $contactObject = new SimplePublicObjectInput(['properties' => $properties]);
 
         expect(fn () => Hubspot::crm()->contacts()->basicApi()->create($contactObject))
-            ->toThrow(\Exception::class);
+            ->toThrow(Exception::class);
 
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // Expected - should throw an exception with invalid API key
         expect($e->getMessage())->toContain('401');
     }
@@ -233,7 +236,7 @@ function cleanupTestContact($contactId)
 {
     try {
         Hubspot::crm()->contacts()->basicApi()->archive($contactId);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // Ignore cleanup errors
     }
 }
@@ -242,13 +245,13 @@ function cleanupTestCompany($companyId)
 {
     try {
         Hubspot::crm()->companies()->basicApi()->archive($companyId);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         // Ignore cleanup errors
     }
 }
 
 // Test model class for integration tests
-class TestCompany extends \Illuminate\Database\Eloquent\Model
+class TestCompany extends Model
 {
     protected $fillable = ['name', 'domain'];
 

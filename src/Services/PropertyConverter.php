@@ -2,6 +2,8 @@
 
 namespace Tapp\LaravelHubspot\Services;
 
+use Carbon\Carbon;
+
 class PropertyConverter
 {
     /**
@@ -11,7 +13,7 @@ class PropertyConverter
     {
         if (is_null($value)) {
             return null;
-        } elseif ($value instanceof \Carbon\Carbon) {
+        } elseif ($value instanceof Carbon) {
             return $value->toISOString();
         } elseif (is_array($value)) {
             if (empty($value)) {

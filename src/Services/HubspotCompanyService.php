@@ -5,9 +5,11 @@ namespace Tapp\LaravelHubspot\Services;
 use HubSpot\Client\Crm\Associations\V4\ApiException as AssociationsApiException;
 use HubSpot\Client\Crm\Associations\V4\Model\AssociationSpec;
 use HubSpot\Client\Crm\Companies\ApiException as CompaniesApiException;
+use HubSpot\Client\Crm\Companies\Model\Error;
 use HubSpot\Client\Crm\Companies\Model\Filter;
 use HubSpot\Client\Crm\Companies\Model\FilterGroup;
 use HubSpot\Client\Crm\Companies\Model\PublicObjectSearchRequest as CompanySearch;
+use HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate;
 use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 
@@ -98,11 +100,11 @@ class HubspotCompanyService
 
             // Try to create the company, handle duplicates gracefully
             try {
-                $companyInput = new \HubSpot\Client\Crm\Companies\Model\SimplePublicObjectInputForCreate(['properties' => $properties]);
+                $companyInput = new SimplePublicObjectInputForCreate(['properties' => $properties]);
                 $newCompany = Hubspot::crm()->companies()->basicApi()->create($companyInput);
 
                 // Check if response is an Error object
-                if ($newCompany instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+                if ($newCompany instanceof Error) {
                     throw new \Exception('HubSpot API returned an error: '.$newCompany->getMessage());
                 }
 
@@ -174,7 +176,7 @@ class HubspotCompanyService
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
 
             // Check if it's an error response
-            if ($searchResults instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+            if ($searchResults instanceof Error) {
                 throw new \Exception('HubSpot API returned an error: '.$searchResults->getMessage());
             }
 
@@ -215,7 +217,7 @@ class HubspotCompanyService
             $searchResults = Hubspot::crm()->companies()->searchApi()->doSearch($companySearch);
 
             // Check if it's an error response
-            if ($searchResults instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+            if ($searchResults instanceof Error) {
                 throw new \Exception('HubSpot API returned an error: '.$searchResults->getMessage());
             }
 
@@ -289,7 +291,7 @@ class HubspotCompanyService
                 $company = Hubspot::crm()->companies()->basicApi()->getById($companyId);
 
                 // Check if response is an Error object
-                if ($company instanceof \HubSpot\Client\Crm\Companies\Model\Error) {
+                if ($company instanceof Error) {
                     throw new \Exception('HubSpot API returned an error: '.$company->getMessage());
                 }
 

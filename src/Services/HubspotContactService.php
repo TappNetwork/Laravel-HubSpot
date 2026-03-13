@@ -3,6 +3,7 @@
 namespace Tapp\LaravelHubspot\Services;
 
 use HubSpot\Client\Crm\Contacts\ApiException;
+use HubSpot\Client\Crm\Contacts\Model\Error;
 use HubSpot\Client\Crm\Contacts\Model\Filter as ContactFilter;
 use HubSpot\Client\Crm\Contacts\Model\FilterGroup as ContactFilterGroup;
 use HubSpot\Client\Crm\Contacts\Model\PublicObjectSearchRequest as ContactSearchRequest;
@@ -25,7 +26,7 @@ class HubspotContactService
             $hubspotContact = Hubspot::crm()->contacts()->basicApi()->create($properties);
 
             // Check if response is an Error object
-            if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+            if ($hubspotContact instanceof Error) {
                 throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
             }
 
@@ -165,7 +166,7 @@ class HubspotContactService
             );
 
             // Check if response is an Error object
-            if ($hubspotContact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+            if ($hubspotContact instanceof Error) {
                 throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
             }
         } catch (ApiException $e) {
@@ -225,7 +226,7 @@ class HubspotContactService
                 $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['hubspot_id']);
 
                 // Check if response is an Error object
-                if ($contact instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+                if ($contact instanceof Error) {
                     throw new \Exception('HubSpot API returned an error: '.$contact->getMessage());
                 }
 
@@ -267,7 +268,7 @@ class HubspotContactService
 
             $searchResults = Hubspot::crm()->contacts()->searchApi()->doSearch($searchRequest);
 
-            if ($searchResults instanceof \HubSpot\Client\Crm\Contacts\Model\Error) {
+            if ($searchResults instanceof Error) {
                 Log::warning('HubSpot contact search returned error', [
                     'email' => $email,
                     'error' => $searchResults->getMessage(),
@@ -462,7 +463,7 @@ class HubspotContactService
             return;
         }
 
-        /** @var \Illuminate\Database\Eloquent\Model|null $model */
+        /** @var Model|null $model */
         $model = $modelClass::find($modelId);
         if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
             $model->setHubspotId($hubspotId);
@@ -589,7 +590,7 @@ class HubspotContactService
         $companyModelClass = str_replace('User', 'Agency', $modelClass);
 
         if (class_exists($companyModelClass)) {
-            /** @var \Illuminate\Database\Eloquent\Model|null $company */
+            /** @var Model|null $company */
             $company = $companyModelClass::find($modelId);
             if ($company instanceof Model && method_exists($company, 'setHubspotId')) {
                 $company->setHubspotId($hubspotId);

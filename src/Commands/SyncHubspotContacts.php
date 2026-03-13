@@ -3,6 +3,7 @@
 namespace Tapp\LaravelHubspot\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
@@ -37,7 +38,7 @@ class SyncHubspotContacts extends Command
      */
     public function handle(): int
     {
-        /** @var class-string<\Illuminate\Database\Eloquent\Model> $contactModel */
+        /** @var class-string<Model> $contactModel */
         $contactModel = $this->argument('model');
         $delay = (int) $this->option('delay');
         $limit = $this->option('limit');
@@ -122,7 +123,7 @@ class SyncHubspotContacts extends Command
     /**
      * Prepare contact data for the service.
      */
-    protected function prepareContactData(\Illuminate\Database\Eloquent\Model $contact): array
+    protected function prepareContactData(Model $contact): array
     {
         $data = $contact->toArray();
 

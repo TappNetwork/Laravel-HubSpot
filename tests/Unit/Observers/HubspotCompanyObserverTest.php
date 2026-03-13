@@ -1,16 +1,18 @@
 <?php
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Queue;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotCompanyJob;
+use Tapp\LaravelHubspot\Models\HubspotCompany;
 use Tapp\LaravelHubspot\Observers\HubspotCompanyObserver;
 use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
 // Test model for observer tests
-class CompanyObserverTestModel extends \Illuminate\Database\Eloquent\Model implements HubspotModelInterface
+class CompanyObserverTestModel extends Model implements HubspotModelInterface
 {
+    use HubspotCompany;
     use HubspotModelTrait;
-    use \Tapp\LaravelHubspot\Models\HubspotCompany;
 
     protected $fillable = ['name', 'domain', 'hubspot_id'];
 
