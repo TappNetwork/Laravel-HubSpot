@@ -31,6 +31,10 @@ class PropertyConverter
 
             // Handle regular indexed arrays
             return implode(', ', array_filter($value, 'is_scalar'));
+        } elseif ($value instanceof \BackedEnum) {
+            return (string) $value->value;
+        } elseif ($value instanceof \UnitEnum) {
+            return $value->name;
         } elseif (is_object($value)) {
             if (method_exists($value, '__toString')) {
                 return (string) $value;
