@@ -2,6 +2,18 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.1.0 - 2026-05-18
+
+### What's Changed
+
+* Bump stefanzweifel/git-auto-commit-action from 6 to 7 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/31
+* Bump actions/checkout from 5 to 6 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/33
+* Bump ramsey/composer-install from 3 to 4 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/40
+* Bump dependabot/fetch-metadata from 2.5.0 to 3.1.0 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/42
+* Update hubspot/api-client requirement from ^13.0 to ^14.1 by @dependabot[bot] in https://github.com/TappNetwork/Laravel-HubSpot/pull/43
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.0.5...v2.1.0
+
 ## v2.0.5 - 2026-03-13
 
 ### What's Changed
