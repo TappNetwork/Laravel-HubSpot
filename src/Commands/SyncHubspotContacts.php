@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
+use Tapp\LaravelHubspot\Support\HubspotModelDataPreparer;
 
 class SyncHubspotContacts extends Command
 {
@@ -125,48 +126,6 @@ class SyncHubspotContacts extends Command
      */
     protected function prepareContactData(Model $contact): array
     {
-        $data = $contact->toArray();
-
-        // Service expects hubspot_id and modelClass; use getHubspotId() so custom column (e.g. hubspot_contact_id) is respected
-        $data['hubspot_id'] = $contact instanceof HubspotModelInterface ? $contact->getHubspotId() : ($data['hubspot_id'] ?? null);
-        $data['id'] = $contact->getKey();
-        $data['modelClass'] = get_class($contact);
-
-        // Add HubSpot-specific properties
-        $data['hubspotMap'] = $contact->hubspotMap ?? [];
-        $data['hubspotUpdateMap'] = $contact->hubspotUpdateMap ?? [];
-        $data['hubspotCompanyRelation'] = $contact->hubspotCompanyRelation ?? '';
-
-        // Include dynamic properties from hubspotProperties and getHubspotProperties
-        $map = $contact->hubspotMap ?? [];
-        $dynamicProperties = [];
-        if (method_exists($contact, 'hubspotProperties')) {
-            $dynamicProperties = array_merge($dynamicProperties, $contact->hubspotProperties($map));
-        }
-        if (method_exists($contact, 'getHubspotProperties')) {
-            $dynamicProperties = array_merge($dynamicProperties, $contact->getHubspotProperties($map));
-        }
-        if (! empty($dynamicProperties)) {
-            $data['dynamicProperties'] = [];
-            foreach ($dynamicProperties as $hubspotField => $value) {
-                if (! in_array($hubspotField, array_values($map))) {
-                    $data['dynamicProperties'][$hubspotField] = $value;
-                }
-            }
-        }
-
-        // Include company relation data if it exists
-        if (! empty($contact->hubspotCompanyRelation)) {
-            $company = $contact->getRelationValue($contact->hubspotCompanyRelation);
-            if ($company) {
-                $data['hubspotCompanyRelation'] = [
-                    'id' => $company->getKey(),
-                    'hubspot_id' => $company->getAttribute('hubspot_id') ?? null,
-                    'name' => $company->name ?? $company->getAttribute('name'),
-                ];
-            }
-        }
-
-        return $data;
+        return HubspotModelDataPreparer::fromModel($contact);
     }
 }

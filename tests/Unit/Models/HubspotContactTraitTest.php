@@ -1,13 +1,20 @@
 <?php
 
+use Illuminate\Database\Eloquent\Model;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Models\HubspotContact;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
+use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
 // Create a test model that uses the trait
-class TestUserModel implements HubspotModelInterface
+class TestUserModel extends Model implements HubspotModelInterface
 {
     use HubspotContact;
+    use HubspotModelTrait;
+
+    protected $guarded = [];
+
+    protected $table = 'test_user_models';
 
     public $id = 1;
 
@@ -58,11 +65,6 @@ class TestUserModel implements HubspotModelInterface
     public function setHubspotId(?string $hubspotId): void
     {
         $this->hubspot_id = $hubspotId;
-    }
-
-    public function getRelationValue(string $relation)
-    {
-        return null;
     }
 }
 
