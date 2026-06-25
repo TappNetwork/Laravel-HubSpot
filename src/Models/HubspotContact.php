@@ -4,10 +4,10 @@ namespace Tapp\LaravelHubspot\Models;
 
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate as ContactObject;
 use Illuminate\Support\Facades\Log;
-use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 use Tapp\LaravelHubspot\Services\PropertyConverter;
+use Tapp\LaravelHubspot\Support\HubspotModelDataPreparer;
 use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
 
 trait HubspotContact
@@ -109,37 +109,7 @@ trait HubspotContact
     {
         $service = app(HubspotContactService::class);
 
-        $data = [
-            'id' => $this->getKey(),
-            'hubspot_id' => $this->getHubspotId(),
-            'hubspotMap' => $this->getHubspotMap(),
-            'hubspotUpdateMap' => $this->getHubspotUpdateMap(),
-            'hubspotCompanyRelation' => $this->getHubspotCompanyRelation(),
-        ];
-
-        // Include mapped fields
-        foreach ($this->getHubspotMap() as $hubspotField => $modelField) {
-            $data[$modelField] = data_get($this, $modelField);
-        }
-
-        // Include dynamic properties
-        $dynamicProperties = $this->getHubspotProperties($this->getHubspotMap());
-        if (! empty($dynamicProperties)) {
-            $data['dynamicProperties'] = $dynamicProperties;
-        }
-
-        // Include company relation data if it exists
-        $companyRelation = $this->getHubspotCompanyRelation();
-        if (! empty($companyRelation)) {
-            $company = $this->getRelationValue($companyRelation);
-            if ($company) {
-                $data['hubspotCompanyRelation'] = [
-                    'id' => $company->getKey(),
-                    'hubspot_id' => $company instanceof HubspotModelInterface ? $company->getHubspotId() : ($company->hubspot_id ?? null),
-                    'name' => $company->name ?? $company->getAttribute('name'),
-                ];
-            }
-        }
+        $data = HubspotModelDataPreparer::fromModel($this);
 
         // Try to update first if hubspot_id exists, otherwise create
         if (! empty($this->getHubspotId())) {
