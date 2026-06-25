@@ -2,6 +2,16 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.1.1 - 2026-06-25
+
+### What's Changed
+
+* Restore parity between bulk and single HubSpot contact sync by @scottgrayson in https://github.com/TappNetwork/Laravel-HubSpot/pull/45
+
+Bulk sync (`hubspot:sync-contacts`) now resolves mapped model fields via `data_get`, matching observer and manual sync behavior. Fixes missing accessor-backed attributes (e.g. `organization_name`) in bulk sync.
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.1.0...v2.1.1
+
 ## v2.1.0 - 2026-05-18
 
 ### What's Changed
