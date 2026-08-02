@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.2.0 - 2026-08-02
+
+### What's Changed
+
+* Add Laravel 13 support by @swilla in https://github.com/TappNetwork/Laravel-HubSpot/pull/46
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.1.1...v2.2.0
+
 ## v2.1.1 - 2026-06-25
 
 ### What's Changed
