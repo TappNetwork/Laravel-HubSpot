@@ -2,6 +2,12 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## Unreleased
+
+### What's Changed
+
+* Search all mapped email values (`email` and `secondary_email`) before creating a contact, so an existing contact under a non-primary mapped email is updated instead of duplicated
+
 ## v2.2.0 - 2026-08-02
 
 ### What's Changed

@@ -17,9 +17,30 @@ class HubspotContactService
 {
     /**
      * Create a new HubSpot contact.
+     *
+     * Searches for an existing contact by all mapped email values before creating,
+     * so a contact that already exists under a secondary mapped email is updated
+     * instead of duplicated.
      */
     public function createContact(array $data, string $modelClass): array
     {
+        $existingContact = $this->findContactByMappedEmails($data);
+        if ($existingContact && isset($existingContact['id'])) {
+            Log::info('HubSpot contact already exists for mapped email, updating instead of creating', [
+                'hubspot_id' => $existingContact['id'],
+                'emails' => $this->getMappedEmailValues($data),
+            ]);
+
+            $this->updateModelHubspotId($data['id'] ?? null, (string) $existingContact['id'], $modelClass);
+
+            $data['hubspot_id'] = $existingContact['id'];
+            $data['modelClass'] = $modelClass;
+            $this->updateContact($data);
+            $this->associateCompanyIfNeeded((string) $existingContact['id'], $data);
+
+            return $existingContact;
+        }
+
         $properties = $this->buildPropertiesObject($data['hubspotMap'] ?? [], $data);
 
         try {
@@ -239,16 +260,67 @@ class HubspotContactService
             }
         }
 
-        // Find contact by email using the Search API (getById does not accept email)
-        $emailField = $this->getMappedEmailField($data);
-        if ($emailField) {
-            $contact = $this->findContactByEmail($emailField, $data);
+        return $this->findContactByMappedEmails($data);
+    }
+
+    /**
+     * Find a contact by any email value mapped on the model (identity email and secondary_email).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{id: string, properties: array<string, mixed>}|null
+     */
+    protected function findContactByMappedEmails(array $data): ?array
+    {
+        foreach ($this->getMappedEmailValues($data) as $email) {
+            $contact = $this->findContactByEmail($email, $data);
             if ($contact !== null) {
                 return $contact;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Collect unique email values from hubspotMap keys named email or secondary_email.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<string>
+     */
+    protected function getMappedEmailValues(array $data): array
+    {
+        $emails = [];
+        $map = $data['hubspotMap'] ?? [];
+
+        foreach (['email', 'secondary_email'] as $hubspotProperty) {
+            if (! isset($map[$hubspotProperty])) {
+                continue;
+            }
+
+            $modelField = $map[$hubspotProperty];
+            $value = str_contains((string) $modelField, '.')
+                ? data_get($data, $modelField)
+                : ($data[$modelField] ?? null);
+
+            if (is_string($value) && $value !== '') {
+                $emails[strtolower(trim($value))] = trim($value);
+            }
+        }
+
+        if ($emails === [] && ! empty($data['email']) && is_string($data['email'])) {
+            $emails[strtolower(trim($data['email']))] = trim($data['email']);
+        }
+
+        if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
+            foreach (['email', 'secondary_email'] as $hubspotProperty) {
+                $value = $data['dynamicProperties'][$hubspotProperty] ?? null;
+                if (is_string($value) && $value !== '') {
+                    $emails[strtolower(trim($value))] = trim($value);
+                }
+            }
+        }
+
+        return array_values($emails);
     }
 
     /**
