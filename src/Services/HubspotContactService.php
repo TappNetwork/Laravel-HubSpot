@@ -264,7 +264,7 @@ class HubspotContactService
     }
 
     /**
-     * Find a contact by any email value mapped on the model (identity email and secondary_email).
+     * Find a contact by any configured email property value mapped on the model.
      *
      * @param  array<string, mixed>  $data
      * @return array{id: string, properties: array<string, mixed>}|null
@@ -282,7 +282,23 @@ class HubspotContactService
     }
 
     /**
-     * Collect unique email values from hubspotMap keys named email or secondary_email.
+     * HubSpot contact property names used when collecting emails for pre-create lookup.
+     *
+     * @return list<string>
+     */
+    protected function contactEmailProperties(): array
+    {
+        $properties = config('hubspot.contact_email_properties', ['email', 'secondary_email']);
+
+        if (! is_array($properties)) {
+            return ['email', 'secondary_email'];
+        }
+
+        return array_values(array_filter($properties, fn (mixed $property): bool => is_string($property) && $property !== ''));
+    }
+
+    /**
+     * Collect unique email values from hubspotMap keys listed in contact_email_properties.
      *
      * @param  array<string, mixed>  $data
      * @return list<string>
@@ -291,8 +307,9 @@ class HubspotContactService
     {
         $emails = [];
         $map = $data['hubspotMap'] ?? [];
+        $emailProperties = $this->contactEmailProperties();
 
-        foreach (['email', 'secondary_email'] as $hubspotProperty) {
+        foreach ($emailProperties as $hubspotProperty) {
             if (! isset($map[$hubspotProperty])) {
                 continue;
             }
@@ -312,7 +329,7 @@ class HubspotContactService
         }
 
         if (isset($data['dynamicProperties']) && is_array($data['dynamicProperties'])) {
-            foreach (['email', 'secondary_email'] as $hubspotProperty) {
+            foreach ($emailProperties as $hubspotProperty) {
                 $value = $data['dynamicProperties'][$hubspotProperty] ?? null;
                 if (is_string($value) && $value !== '') {
                     $emails[strtolower(trim($value))] = trim($value);

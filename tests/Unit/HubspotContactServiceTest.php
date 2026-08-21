@@ -176,7 +176,7 @@ test('it updates existing contact instead of creating when secondary mapped emai
     expect($result['id'])->toBe('99999');
 });
 
-test('it collects mapped email values from email and secondary_email map keys', function () {
+test('it collects mapped email values from configured contact_email_properties', function () {
     $data = [
         'email' => 'login@example.com',
         'secondary_email' => 'work@example.com',
@@ -195,6 +195,64 @@ test('it collects mapped email values from email and secondary_email map keys', 
     expect($emails)->toContain('work@example.com')
         ->and($emails)->toContain('login@example.com')
         ->and($emails)->toHaveCount(2);
+});
+
+test('it collects custom email properties when configured', function () {
+    config([
+        'hubspot.contact_email_properties' => [
+            'email',
+            'work_email',
+            'personal_email',
+        ],
+    ]);
+
+    $data = [
+        'login_email' => 'login@example.com',
+        'work' => 'work@example.com',
+        'personal' => 'personal@example.com',
+        'hubspotMap' => [
+            'email' => 'login_email',
+            'work_email' => 'work',
+            'personal_email' => 'personal',
+            'secondary_email' => 'login_email',
+        ],
+    ];
+
+    $reflection = new ReflectionClass($this->service);
+    $method = $reflection->getMethod('getMappedEmailValues');
+    $method->setAccessible(true);
+
+    $emails = $method->invoke($this->service, $data);
+
+    expect($emails)->toContain('login@example.com')
+        ->and($emails)->toContain('work@example.com')
+        ->and($emails)->toContain('personal@example.com')
+        ->and($emails)->toHaveCount(3);
+});
+
+test('it ignores unconfigured email map keys when collecting emails', function () {
+    config([
+        'hubspot.contact_email_properties' => [
+            'email',
+        ],
+    ]);
+
+    $data = [
+        'email' => 'login@example.com',
+        'secondary_email' => 'work@example.com',
+        'hubspotMap' => [
+            'email' => 'email',
+            'secondary_email' => 'secondary_email',
+        ],
+    ];
+
+    $reflection = new ReflectionClass($this->service);
+    $method = $reflection->getMethod('getMappedEmailValues');
+    $method->setAccessible(true);
+
+    $emails = $method->invoke($this->service, $data);
+
+    expect($emails)->toBe(['login@example.com']);
 });
 
 test('it updates contact successfully', function () {

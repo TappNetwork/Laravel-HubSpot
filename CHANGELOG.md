@@ -6,7 +6,8 @@ All notable changes to `Laravel-Hubspot` will be documented in this file.
 
 ### What's Changed
 
-* Search all mapped email values (`email` and `secondary_email`) before creating a contact, so an existing contact under a non-primary mapped email is updated instead of duplicated
+* Search configured mapped email values before creating a contact, so an existing contact under a non-primary mapped email is updated instead of duplicated
+* Add `contact_email_properties` config (defaults: `email`, `secondary_email`) so apps can include custom HubSpot email properties such as `work_email` or `personal_email`
 
 ## v2.2.0 - 2026-08-02
 
