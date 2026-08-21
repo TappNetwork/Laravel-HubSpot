@@ -2,6 +2,17 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## Unreleased
+
+## v2.3.0 - 2026-08-21
+
+### What's Changed
+
+* Search configured mapped email values before creating a contact, so an existing contact under a non-primary mapped email is updated instead of duplicated
+* Add `contact_email_properties` config (defaults: `email`, `secondary_email`) so apps can include custom HubSpot email properties such as `work_email` or `personal_email`
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.2.0...v2.3.0
+
 ## v2.2.0 - 2026-08-02
 
 ### What's Changed

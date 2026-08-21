@@ -12,6 +12,14 @@ return [
     'contact_id_column' => env('HUBSPOT_CONTACT_ID_COLUMN', 'hubspot_id'),
     'company_id_column' => env('HUBSPOT_COMPANY_ID_COLUMN', 'hubspot_id'),
 
+    // HubSpot contact property names from hubspotMap whose values are used for
+    // pre-create contact lookup (dedupe). Include any custom email properties
+    // your portal maps (e.g. work_email, personal_email).
+    'contact_email_properties' => [
+        'email',
+        'secondary_email',
+    ],
+
     // Queue configuration
     'queue' => [
         'enabled' => env('HUBSPOT_QUEUE_ENABLED', true),

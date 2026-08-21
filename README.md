@@ -29,6 +29,28 @@ HUBSPOT_PROPERTY_GROUP=app_user_profile
 HUBSPOT_PROPERTY_GROUP_LABEL=App User Profile
 ```
 
+Publish the config to customize options:
+
+```bash
+php artisan vendor:publish --tag="laravel-hubspot-config"
+```
+
+### Contact email properties (dedupe)
+
+Before creating a contact, the package searches HubSpot using values from configured `$hubspotMap` keys. Defaults are HubSpot property names `email` and `secondary_email` (the latter is commonly a custom portal property). Add any other email properties your portal uses:
+
+```php
+// config/hubspot.php
+'contact_email_properties' => [
+    'email',
+    'secondary_email',
+    'work_email',
+    'personal_email',
+],
+```
+
+Only properties listed here are used for pre-create lookup. They must also appear as keys in your model's `$hubspotMap`.
+
 ## Usage
 
 ### User Model Setup
