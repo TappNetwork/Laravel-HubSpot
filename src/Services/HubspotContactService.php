@@ -25,7 +25,7 @@ class HubspotContactService
     public function createContact(array $data, string $modelClass): array
     {
         $existingContact = $this->findContactByMappedEmails($data);
-        if ($existingContact && isset($existingContact['id'])) {
+        if ($existingContact !== null) {
             Log::info('HubSpot contact already exists for mapped email, updating instead of creating', [
                 'hubspot_id' => $existingContact['id'],
                 'emails' => $this->getMappedEmailValues($data),
