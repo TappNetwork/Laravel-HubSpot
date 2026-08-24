@@ -71,10 +71,14 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
     protected function updateCompany(): void
     {
         if (empty($this->modelData['hubspot_id'])) {
-            throw new \Exception(
-                'HubSpot ID missing in model. Cannot update company: '.($this->modelData['name'] ?? 'unknown').
-                ' The model has no HubSpot ID (e.g. '.config('hubspot.company_id_column', 'hubspot_id').') set.'
-            );
+            Log::info('HubSpot ID missing on company update, creating instead', [
+                'name' => $this->modelData['name'] ?? 'unknown',
+                'model_id' => $this->modelData['id'] ?? null,
+            ]);
+
+            $this->createCompany();
+
+            return;
         }
 
         $properties = $this->buildUpdatePropertiesObject($this->modelData['hubspotMap'] ?? []);

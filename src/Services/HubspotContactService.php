@@ -138,10 +138,16 @@ class HubspotContactService
     public function updateContact(array $data): array
     {
         if (empty($data['hubspot_id'])) {
-            throw new \Exception(
-                'HubSpot ID missing in model. Cannot update contact: '.($data['email'] ?? 'unknown').
-                ' The model has no HubSpot ID (e.g. '.config('hubspot.contact_id_column', 'hubspot_id').') set.'
-            );
+            $data = $this->hydrateHubspotIdFromModel($data);
+        }
+
+        if (empty($data['hubspot_id'])) {
+            Log::info('HubSpot ID missing on update, creating or finding contact instead', [
+                'email' => $data['email'] ?? 'unknown',
+                'model_id' => $data['id'] ?? null,
+            ]);
+
+            return $this->createContact($data, is_string($data['modelClass'] ?? null) ? $data['modelClass'] : '');
         }
 
         // Validate that the contact exists in HubSpot before attempting update
@@ -213,6 +219,37 @@ class HubspotContactService
             'id' => $hubspotContact->getId(),
             'properties' => $hubspotContact->getProperties() ?: [],
         ];
+    }
+
+    /**
+     * Reload hubspot_id from the local model when a queued update snapshot is stale.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function hydrateHubspotIdFromModel(array $data): array
+    {
+        $modelClass = is_string($data['modelClass'] ?? null) ? $data['modelClass'] : null;
+        $modelId = isset($data['id']) ? (int) $data['id'] : 0;
+
+        if ($modelId < 1 || $modelClass === null || $modelClass === '' || ! class_exists($modelClass)) {
+            return $data;
+        }
+
+        /** @var Model|null $model */
+        $model = $modelClass::query()->find($modelId);
+
+        if (! $model instanceof Model || ! method_exists($model, 'getHubspotId')) {
+            return $data;
+        }
+
+        $hubspotId = $model->getHubspotId();
+
+        if (is_string($hubspotId) && $hubspotId !== '') {
+            $data['hubspot_id'] = $hubspotId;
+        }
+
+        return $data;
     }
 
     /**
@@ -556,7 +593,7 @@ class HubspotContactService
         $model = $modelClass::find($modelId);
         if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
             $model->setHubspotId($hubspotId);
-            $model->save();
+            $model->saveQuietly();
         }
     }
 

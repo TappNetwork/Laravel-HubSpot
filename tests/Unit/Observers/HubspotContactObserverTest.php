@@ -159,3 +159,53 @@ test('it includes dynamic properties from overridden hubspot properties method',
     expect($jobData['dynamicProperties']['courses_completed'])->toBe('3');
     expect($jobData['dynamicProperties']['last_course_access'])->toBe('2024-01-15');
 });
+
+test('it ignores mapped fields listed in hubspotSyncIgnoredFields', function () {
+    $model = new class extends Model implements HubspotModelInterface
+    {
+        use HubspotModelTrait;
+
+        public array $hubspotMap = [
+            'email' => 'email',
+            'app_last_login' => 'last_login',
+        ];
+
+        public array $hubspotSyncIgnoredFields = [
+            'last_login',
+        ];
+    };
+
+    $model->exists = true;
+    $model->email = 'test@example.com';
+    $model->last_login = null;
+    $model->syncOriginal();
+    $model->last_login = '2026-08-24 14:54:06';
+    $model->syncChanges();
+
+    $reflection = new ReflectionClass($this->observer);
+    $method = $reflection->getMethod('hasHubspotRelevantChanges');
+    $method->setAccessible(true);
+
+    expect($method->invoke($this->observer, $model))->toBeFalse();
+
+    $model->syncOriginal();
+    $model->email = 'updated@example.com';
+    $model->syncChanges();
+
+    expect($method->invoke($this->observer, $model))->toBeTrue();
+});
+
+test('it dispatches create when an update has no hubspot id', function () {
+    $model = new ContactObserverTestModel;
+    $model->hubspot_id = null;
+
+    $reflection = new ReflectionClass($this->observer);
+    $method = $reflection->getMethod('syncOperation');
+    $method->setAccessible(true);
+
+    expect($method->invoke($this->observer, $model))->toBe('create');
+
+    $model->hubspot_id = '12345';
+
+    expect($method->invoke($this->observer, $model))->toBe('update');
+});

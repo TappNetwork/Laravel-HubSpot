@@ -70,6 +70,13 @@ class User extends Authenticatable implements HubspotModelInterface
         'first_name' => 'first_name',
         'last_name' => 'last_name',
         'user_type' => 'type.name', // Supports dot notation for relations
+        'app_last_login' => 'last_login',
+    ];
+
+    // Stay in `$hubspotMap` so they still sync with other changes / bulk sync,
+    // but do not queue a job when they are the only dirty attributes.
+    public array $hubspotSyncIgnoredFields = [
+        'last_login',
     ];
 }
 ```
@@ -85,6 +92,10 @@ class User extends Authenticatable implements HubspotModelInterface
 - `getHubspotId()` / `setHubspotId()` - Manages the HubSpot ID
 
 The traits (`HubspotContact`, `HubspotCompany`) provide the implementation for these methods, so you only need to implement the interface and define your `$hubspotMap` array.
+
+Optional: `$hubspotSyncIgnoredFields` (via `getHubspotSyncIgnoredFields()`) lists model attributes that remain in `$hubspotMap` but do not trigger an observer job on their own. Use this for high-churn fields such as `last_login`.
+
+If an update job runs before `hubspot_id` is written (register, then an immediate mapped-field save), the service reloads the id from the model or finds/creates the contact instead of throwing. Queued jobs also rebuild their payload from the live model before calling HubSpot, and writing `hubspot_id` uses `saveQuietly()` so that write does not queue another sync.
 
 ### Company Model Setup
 

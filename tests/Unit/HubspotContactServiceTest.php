@@ -255,6 +255,99 @@ test('it ignores unconfigured email map keys when collecting emails', function (
     expect($emails)->toBe(['login@example.com']);
 });
 
+test('it creates or finds a contact when update has no hubspot id', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    $mockResponse = new SimplePublicObject;
+    $mockResponse->setId('12345');
+    $mockResponse->setProperties([
+        'email' => 'test@example.com',
+        'firstname' => 'John',
+        'lastname' => 'Doe',
+    ]);
+
+    $mockSearchResponse = Mockery::mock();
+    $mockSearchResponse->shouldReceive('getTotal')->andReturn(0);
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($mockSearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->create')
+        ->once()
+        ->andReturn($mockResponse);
+
+    $data = [
+        'id' => 1,
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    $result = $this->service->updateContact($data);
+
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe('12345');
+});
+
+test('it updates an existing contact when update has no hubspot id but email matches', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    $existingContact = new SimplePublicObject;
+    $existingContact->setId('99999');
+    $existingContact->setProperties([
+        'email' => 'test@example.com',
+    ]);
+
+    $mockSearchResponse = Mockery::mock();
+    $mockSearchResponse->shouldReceive('getTotal')->andReturn(1);
+    $mockSearchResponse->shouldReceive('getResults')->andReturn([$existingContact]);
+
+    $mockUpdateResponse = new SimplePublicObject;
+    $mockUpdateResponse->setId('99999');
+    $mockUpdateResponse->setProperties([
+        'email' => 'test@example.com',
+        'firstname' => 'John',
+    ]);
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($mockSearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with('99999')
+        ->andReturn(['id' => '99999']);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with('99999', Mockery::any())
+        ->andReturn($mockUpdateResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->create')->never();
+
+    $data = [
+        'id' => 1,
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    $result = $this->service->updateContact($data);
+
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe('99999');
+});
+
 test('it updates contact successfully', function () {
     // Set a dummy API key to prevent initialization error
     config(['hubspot.api_key' => 'dummy-key']);

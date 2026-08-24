@@ -35,7 +35,7 @@ class HubspotContactObserver
             return;
         }
 
-        $this->dispatchSyncJob($model, 'update');
+        $this->dispatchSyncJob($model, $this->syncOperation($model));
     }
 
     /**
@@ -69,9 +69,15 @@ class HubspotContactObserver
             return false;
         }
 
-        $hubspotFields = array_values($model->getHubspotMap());
+        $ignoredFields = method_exists($model, 'getHubspotSyncIgnoredFields')
+            ? $model->getHubspotSyncIgnoredFields()
+            : [];
 
-        // Check if any HubSpot-mapped fields have changed
+        $hubspotFields = array_values(array_diff(
+            $model->getHubspotMap(),
+            $ignoredFields,
+        ));
+
         foreach ($hubspotFields as $field) {
             if ($model->wasChanged($field)) {
                 return true;
@@ -79,6 +85,19 @@ class HubspotContactObserver
         }
 
         return false;
+    }
+
+    /**
+     * Prefer create when the model has no HubSpot ID yet so a follow-up
+     * mapped-field save (e.g. last login) does not queue a doomed update.
+     */
+    protected function syncOperation(Model $model): string
+    {
+        if ($model instanceof HubspotModelInterface && empty($model->getHubspotId())) {
+            return 'create';
+        }
+
+        return 'update';
     }
 
     /**
