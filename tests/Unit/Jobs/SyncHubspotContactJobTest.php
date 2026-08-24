@@ -1,7 +1,13 @@
 <?php
 
+use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
+use Tapp\LaravelHubspot\Models\HubspotContact;
 
 test('it creates contact when operation is create', function () {
     test()->skipIfNoRealApi();
@@ -140,7 +146,7 @@ test('it rebuilds the payload from the live model and treats a stored id as upda
         ],
     ]);
 
-    Illuminate\Support\Facades\Schema::create('hubspot_job_refresh_users', function (Illuminate\Database\Schema\Blueprint $table): void {
+    Schema::create('hubspot_job_refresh_users', function (Blueprint $table): void {
         $table->id();
         $table->string('email');
         $table->string('first_name')->nullable();
@@ -155,7 +161,7 @@ test('it rebuilds the payload from the live model and treats a stored id as upda
         'hubspot_id' => '99999',
     ]);
 
-    $mockResponse = new HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
+    $mockResponse = new SimplePublicObject;
     $mockResponse->setId('99999');
     $mockResponse->setProperties([
         'email' => 'fresh@example.com',
@@ -195,9 +201,9 @@ test('it rebuilds the payload from the live model and treats a stored id as upda
         ->and($job->modelData['email'])->toBe('fresh@example.com');
 });
 
-class HubspotJobRefreshUser extends Illuminate\Database\Eloquent\Model implements Tapp\LaravelHubspot\Contracts\HubspotModelInterface
+class HubspotJobRefreshUser extends Model implements HubspotModelInterface
 {
-    use Tapp\LaravelHubspot\Models\HubspotContact;
+    use HubspotContact;
 
     protected $table = 'hubspot_job_refresh_users';
 
