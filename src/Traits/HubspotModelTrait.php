@@ -29,6 +29,23 @@ trait HubspotModelTrait
     }
 
     /**
+     * Model fields that stay in `$hubspotMap` (so they still sync) but do not
+     * trigger an observer job when they are the only dirty attributes.
+     *
+     * @return list<string>
+     */
+    public function getHubspotSyncIgnoredFields(): array
+    {
+        $fields = $this->hubspotSyncIgnoredFields ?? [];
+
+        if (! is_array($fields)) {
+            return [];
+        }
+
+        return array_values(array_filter($fields, fn (mixed $field): bool => is_string($field) && $field !== ''));
+    }
+
+    /**
      * Get dynamic HubSpot properties for this model.
      */
     public function getHubspotProperties(array $hubspotMap): array

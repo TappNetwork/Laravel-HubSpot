@@ -9,6 +9,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+use Tapp\LaravelHubspot\Support\HubspotModelDataPreparer;
 
 abstract class BaseHubspotJob implements ShouldQueue
 {
@@ -38,6 +40,10 @@ abstract class BaseHubspotJob implements ShouldQueue
     public function handle(): void
     {
         if (config('hubspot.disabled')) {
+            return;
+        }
+
+        if ($this->refreshLiveModelData() === false) {
             return;
         }
 
@@ -119,8 +125,46 @@ abstract class BaseHubspotJob implements ShouldQueue
         $model = $this->modelClass::find($this->modelData['id'] ?? null);
         if ($model instanceof Model && method_exists($model, 'setHubspotId')) {
             $model->setHubspotId($hubspotId);
-            $model->save();
+            $model->saveQuietly();
         }
+    }
+
+    /**
+     * Replace the dispatch-time snapshot with the current model row.
+     *
+     * @return bool false when the local record no longer exists
+     */
+    protected function refreshLiveModelData(): bool
+    {
+        if (! is_string($this->modelClass) || $this->modelClass === '' || ! class_exists($this->modelClass)) {
+            return true;
+        }
+
+        $modelId = $this->modelData['id'] ?? null;
+
+        if ($modelId === null || $modelId === '') {
+            return true;
+        }
+
+        /** @var Model|null $model */
+        $model = $this->modelClass::query()->find($modelId);
+
+        if (! $model instanceof Model) {
+            Log::info($this->getJobType().' sync skipped because the local model no longer exists', [
+                'model_class' => $this->modelClass,
+                'model_id' => $modelId,
+            ]);
+
+            return false;
+        }
+
+        $this->modelData = HubspotModelDataPreparer::fromModel($model);
+
+        if ($model instanceof HubspotModelInterface) {
+            $this->operation = ! empty($model->getHubspotId()) ? 'update' : 'create';
+        }
+
+        return true;
     }
 
     /**

@@ -4,6 +4,12 @@ All notable changes to `Laravel-Hubspot` will be documented in this file.
 
 ## Unreleased
 
+* When an update is queued without a HubSpot ID, reload the id from the local model or find/create the contact instead of throwing
+* Observer updates with no HubSpot ID dispatch a create job
+* Models can set `$hubspotSyncIgnoredFields` so mapped attributes (e.g. `last_login`) stay in `$hubspotMap` but do not trigger a sync by themselves
+* Queued contact jobs rebuild their payload from the live model before create/update
+* Writing `hubspot_id` back to the local model uses `saveQuietly()` so the observer does not queue another job
+
 ## v2.3.0 - 2026-08-21
 
 ### What's Changed

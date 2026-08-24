@@ -34,7 +34,7 @@ class HubspotCompanyObserver
             return;
         }
 
-        $this->dispatchSyncJob($model, 'update');
+        $this->dispatchSyncJob($model, $this->syncOperation($model));
     }
 
     /**
@@ -68,9 +68,15 @@ class HubspotCompanyObserver
             return false;
         }
 
-        $hubspotFields = array_values($model->getHubspotMap());
+        $ignoredFields = method_exists($model, 'getHubspotSyncIgnoredFields')
+            ? $model->getHubspotSyncIgnoredFields()
+            : [];
 
-        // Check if any HubSpot-mapped fields have changed
+        $hubspotFields = array_values(array_diff(
+            $model->getHubspotMap(),
+            $ignoredFields,
+        ));
+
         foreach ($hubspotFields as $field) {
             if ($model->wasChanged($field)) {
                 return true;
@@ -78,6 +84,18 @@ class HubspotCompanyObserver
         }
 
         return false;
+    }
+
+    /**
+     * Prefer create when the model has no HubSpot ID yet.
+     */
+    protected function syncOperation(Model $model): string
+    {
+        if ($model instanceof HubspotModelInterface && empty($model->getHubspotId())) {
+            return 'create';
+        }
+
+        return 'update';
     }
 
     /**
