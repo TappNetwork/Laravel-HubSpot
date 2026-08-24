@@ -6,6 +6,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+use Tapp\LaravelHubspot\Facades\Hubspot;
 use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
 use Tapp\LaravelHubspot\Models\HubspotContact;
 
@@ -169,16 +170,16 @@ test('it rebuilds the payload from the live model and treats a stored id as upda
         'lastname' => 'User',
     ]);
 
-    Tapp\LaravelHubspot\Facades\Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
         ->with('99999')
         ->andReturn(['id' => '99999']);
 
-    Tapp\LaravelHubspot\Facades\Hubspot::shouldReceive('crm->contacts->basicApi->update')
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
         ->once()
         ->with('99999', Mockery::any())
         ->andReturn($mockResponse);
 
-    Tapp\LaravelHubspot\Facades\Hubspot::shouldReceive('crm->contacts->basicApi->create')->never();
+    Hubspot::shouldReceive('crm->contacts->basicApi->create')->never();
 
     $job = new SyncHubspotContactJob([
         'id' => $user->id,
