@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Queue;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
 use Tapp\LaravelHubspot\Models\HubspotContact;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
@@ -141,4 +143,34 @@ test('updateOrCreateHubspotContact includes all required data', function () {
 
     expect($result)->toBeArray();
     expect($result['id'])->toBe('12345');
+});
+
+test('syncToHubSpot dispatches create when the model has no hubspot id', function () {
+    Queue::fake();
+    config([
+        'hubspot.queue.enabled' => true,
+        'hubspot.disabled' => false,
+    ]);
+
+    $this->model->setHubspotId(null);
+    $this->model->syncToHubSpot();
+
+    Queue::assertPushed(SyncHubspotContactJob::class, function (SyncHubspotContactJob $job): bool {
+        return $job->operation === 'create';
+    });
+});
+
+test('syncToHubSpot dispatches update when the model has a hubspot id', function () {
+    Queue::fake();
+    config([
+        'hubspot.queue.enabled' => true,
+        'hubspot.disabled' => false,
+    ]);
+
+    $this->model->setHubspotId('12345');
+    $this->model->syncToHubSpot();
+
+    Queue::assertPushed(SyncHubspotContactJob::class, function (SyncHubspotContactJob $job): bool {
+        return $job->operation === 'update';
+    });
 });

@@ -95,7 +95,7 @@ The traits (`HubspotContact`, `HubspotCompany`) provide the implementation for t
 
 Optional: `$hubspotSyncIgnoredFields` (via `getHubspotSyncIgnoredFields()`) lists model attributes that remain in `$hubspotMap` but do not trigger an observer job on their own. Use this for high-churn fields such as `last_login`.
 
-If an update job runs before `hubspot_id` is written (register, then an immediate mapped-field save), the service reloads the id from the model or finds/creates the contact instead of throwing. Queued jobs also rebuild their payload from the live model before calling HubSpot, and writing `hubspot_id` uses `saveQuietly()` so that write does not queue another sync.
+If an update job runs before `hubspot_id` is written (register, then an immediate mapped-field save), the service reloads the id from the model or finds the contact by mapped email and updates it (or creates it when none exists). The missing-ID exception is only thrown when there is no mapped email to search. Queued jobs also rebuild their payload from the live model before calling HubSpot, and writing `hubspot_id` uses `saveQuietly()` so that write does not queue another sync.
 
 ### Company Model Setup
 
