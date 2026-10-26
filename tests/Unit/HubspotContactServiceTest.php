@@ -1,8 +1,14 @@
 <?php
 
+use HubSpot\Client\Crm\Contacts\ApiException;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
 use Tapp\LaravelHubspot\Facades\Hubspot;
+use Tapp\LaravelHubspot\Models\HubspotContact;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
 beforeEach(function () {
@@ -270,7 +276,7 @@ test('it creates or finds a contact when update has no hubspot id', function () 
     $mockSearchResponse->shouldReceive('getTotal')->andReturn(0);
 
     Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
-        ->once()
+        ->twice()
         ->andReturn($mockSearchResponse);
 
     Hubspot::shouldReceive('crm->contacts->basicApi->create')
@@ -297,6 +303,13 @@ test('it creates or finds a contact when update has no hubspot id', function () 
 
 test('it updates an existing contact when update has no hubspot id but email matches', function () {
     config(['hubspot.api_key' => 'dummy-key']);
+
+    $user = createEmptyIdContactUser([
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspot_id' => null,
+    ]);
 
     $existingContact = new SimplePublicObject;
     $existingContact->setId('99999');
@@ -331,7 +344,84 @@ test('it updates an existing contact when update has no hubspot id but email mat
     Hubspot::shouldReceive('crm->contacts->basicApi->create')->never();
 
     $data = [
+        'id' => $user->id,
+        'email' => 'test@example.com',
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'modelClass' => HubspotEmptyIdContactUser::class,
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    $result = $this->service->updateContact($data);
+
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe('99999');
+    expect($user->fresh()->hubspot_id)->toBe('99999');
+});
+
+test('it throws when update has no hubspot id and no mapped email', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')->never();
+    Hubspot::shouldReceive('crm->contacts->basicApi->create')->never();
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')->never();
+
+    $data = [
         'id' => 1,
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'hubspotMap' => [
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    expect(fn () => $this->service->updateContact($data))
+        ->toThrow(Exception::class, 'HubSpot ID missing in model. Cannot update contact');
+});
+
+test('it finds by email and updates when hubspot id is invalid', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    $existingContact = new SimplePublicObject;
+    $existingContact->setId('99999');
+    $existingContact->setProperties([
+        'email' => 'test@example.com',
+    ]);
+
+    $mockSearchResponse = Mockery::mock();
+    $mockSearchResponse->shouldReceive('getTotal')->andReturn(1);
+    $mockSearchResponse->shouldReceive('getResults')->andReturn([$existingContact]);
+
+    $mockUpdateResponse = new SimplePublicObject;
+    $mockUpdateResponse->setId('99999');
+    $mockUpdateResponse->setProperties([
+        'email' => 'test@example.com',
+        'firstname' => 'John',
+    ]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with('invalid-id')
+        ->andThrow(new ApiException('Not Found', 404));
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($mockSearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with('99999', Mockery::any())
+        ->andReturn($mockUpdateResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->create')->never();
+
+    $data = [
+        'id' => 1,
+        'hubspot_id' => 'invalid-id',
         'email' => 'test@example.com',
         'first_name' => 'John',
         'last_name' => 'Doe',
@@ -428,3 +518,47 @@ test('it skips execution when no api key is configured', function () {
     expect(fn () => $this->service->createContact($data, 'TestModel'))
         ->toThrow(Exception::class, 'HubSpot client not initialized. Please check your API key configuration.');
 });
+
+/**
+ * @param  array<string, mixed>  $attributes
+ */
+function createEmptyIdContactUser(array $attributes): HubspotEmptyIdContactUser
+{
+    config([
+        'database.default' => 'testing',
+        'database.connections.testing' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ],
+    ]);
+
+    if (! Schema::hasTable('hubspot_empty_id_contact_users')) {
+        Schema::create('hubspot_empty_id_contact_users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('email');
+            $table->string('first_name')->nullable();
+            $table->string('last_name')->nullable();
+            $table->string('hubspot_id')->nullable();
+        });
+    }
+
+    return HubspotEmptyIdContactUser::query()->create($attributes);
+}
+
+class HubspotEmptyIdContactUser extends Model implements HubspotModelInterface
+{
+    use HubspotContact;
+
+    protected $table = 'hubspot_empty_id_contact_users';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+
+    public array $hubspotMap = [
+        'email' => 'email',
+        'firstname' => 'first_name',
+        'lastname' => 'last_name',
+    ];
+}

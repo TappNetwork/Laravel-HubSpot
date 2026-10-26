@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Queue;
 use Tapp\LaravelHubspot\Contracts\HubspotModelInterface;
+use Tapp\LaravelHubspot\Jobs\SyncHubspotContactJob;
 use Tapp\LaravelHubspot\Models\HubspotContact;
 use Tapp\LaravelHubspot\Observers\HubspotContactObserver;
 use Tapp\LaravelHubspot\Traits\HubspotModelTrait;
@@ -196,16 +198,49 @@ test('it ignores mapped fields listed in hubspotSyncIgnoredFields', function () 
 });
 
 test('it dispatches create when an update has no hubspot id', function () {
-    $model = new ContactObserverTestModel;
-    $model->hubspot_id = null;
+    Queue::fake();
+    config([
+        'hubspot.queue.enabled' => true,
+        'hubspot.disabled' => false,
+    ]);
 
-    $reflection = new ReflectionClass($this->observer);
-    $method = $reflection->getMethod('syncOperation');
-    $method->setAccessible(true);
+    $model = makeContactObserverUpdateModel(hubspotId: null);
 
-    expect($method->invoke($this->observer, $model))->toBe('create');
+    $this->observer->updated($model);
 
-    $model->hubspot_id = '12345';
-
-    expect($method->invoke($this->observer, $model))->toBe('update');
+    Queue::assertPushed(SyncHubspotContactJob::class, function (SyncHubspotContactJob $job): bool {
+        return $job->operation === 'create';
+    });
 });
+
+test('it dispatches update when an update has a hubspot id', function () {
+    Queue::fake();
+    config([
+        'hubspot.queue.enabled' => true,
+        'hubspot.disabled' => false,
+    ]);
+
+    $model = makeContactObserverUpdateModel(hubspotId: '12345');
+
+    $this->observer->updated($model);
+
+    Queue::assertPushed(SyncHubspotContactJob::class, function (SyncHubspotContactJob $job): bool {
+        return $job->operation === 'update';
+    });
+});
+
+function makeContactObserverUpdateModel(?string $hubspotId): ContactObserverTestModel
+{
+    $model = new ContactObserverTestModel;
+    $model->exists = true;
+    $model->id = 1;
+    $model->email = 'old@example.com';
+    $model->first_name = 'John';
+    $model->last_name = 'Doe';
+    $model->hubspot_id = $hubspotId;
+    $model->syncOriginal();
+    $model->email = 'new@example.com';
+    $model->syncChanges();
+
+    return $model;
+}

@@ -142,12 +142,32 @@ class HubspotContactService
         }
 
         if (empty($data['hubspot_id'])) {
-            Log::info('HubSpot ID missing on update, creating or finding contact instead', [
-                'email' => $data['email'] ?? 'unknown',
-                'model_id' => $data['id'] ?? null,
-            ]);
+            $emailField = $this->getMappedEmailField($data);
+            if ($emailField) {
+                Log::info('HubSpot ID missing on update, finding contact by email', [
+                    'email' => $emailField,
+                    'model_id' => $data['id'] ?? null,
+                ]);
 
-            return $this->createContact($data, is_string($data['modelClass'] ?? null) ? $data['modelClass'] : '');
+                $contact = $this->findContact($data);
+                if ($contact) {
+                    $contactId = $contact['id'];
+                    $this->updateModelHubspotId($data['id'] ?? null, $contactId, $data['modelClass'] ?? null);
+                    $data['hubspot_id'] = $contactId;
+                } else {
+                    Log::info('HubSpot ID missing on update, no existing contact found by email, creating instead', [
+                        'email' => $emailField,
+                        'model_id' => $data['id'] ?? null,
+                    ]);
+
+                    return $this->createContact($data, $data['modelClass'] ?? '');
+                }
+            } else {
+                throw new \Exception(
+                    'HubSpot ID missing in model. Cannot update contact: '.($data['email'] ?? 'unknown').
+                    ' The model has no HubSpot ID (e.g. '.config('hubspot.contact_id_column', 'hubspot_id').') set.'
+                );
+            }
         }
 
         // Validate that the contact exists in HubSpot before attempting update

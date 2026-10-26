@@ -4,6 +4,8 @@ All notable changes to `Laravel-Hubspot` will be documented in this file.
 
 ## Unreleased
 
+* Empty-ID `updateContact()` uses the same find-by-email-or-create recovery as invalid-ID (404), and still throws when there is no mapped email to search
+
 ## v2.4.0 - 2026-08-24
 
 ### What's Changed
