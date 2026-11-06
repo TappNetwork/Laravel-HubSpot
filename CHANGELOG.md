@@ -12,6 +12,7 @@ All notable changes to `Laravel-Hubspot` will be documented in this file.
 
 ## Unreleased
 
+* Pass `modelClass` into contact update payloads (job + preparer) so email-uniqueness recovery can persist the survivor HubSpot id on the local model
 * On contact update, when HubSpot rejects an email because another contact already owns it, relink the local model to that survivor contact, PATCH it (skipping email when it already matches), and log a warning with orphan/survivor HubSpot ids and model id. Does not merge or delete contacts via the API — a human can merge them in HubSpot if needed.
 * Use `basicApi()->createGroup()` for HubSpot property groups (api-client v15 removed `groupsApi()`)
 * Allow Composer to resolve Laravel 11 in CI despite Packagist advisories with no 11.x patch

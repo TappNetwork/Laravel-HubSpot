@@ -21,9 +21,17 @@ class SyncHubspotContactJob extends BaseHubspotJob
         ]);
 
         if ($this->operation === 'create') {
-            $service->createContact($this->modelData, $this->modelClass);
+            $service->createContact($this->modelData, (string) $this->modelClass);
         } else {
-            $service->updateContact($this->modelData);
+            // updateContact persists hubspot_id via data['modelClass'] (e.g. email
+            // uniqueness recovery). The job holds the class separately from the
+            // payload snapshot, so always inject it for the update path.
+            $data = $this->modelData;
+            if (is_string($this->modelClass) && $this->modelClass !== '') {
+                $data['modelClass'] = $this->modelClass;
+            }
+
+            $service->updateContact($data);
         }
     }
 
