@@ -126,7 +126,8 @@ class SyncHubspotProperties extends Command
         ]);
 
         try {
-            return Hubspot::crm()->properties()->groupsApi()->create($object, $propertyGroupCreate);
+            // hubspot/api-client v15 moved property-group create onto basicApi().
+            return Hubspot::crm()->properties()->basicApi()->createGroup($object, $propertyGroupCreate);
         } catch (ApiException $e) {
             $this->warn('Error creating property group. '.$e->getResponseBody());
             // Property group might already exist, don't throw for this case

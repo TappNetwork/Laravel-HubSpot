@@ -53,6 +53,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Laravel 11 has no patched release for some current Packagist advisories
+          # (e.g. PKSA-b41t-wbzk-9q51 affects <12.68.0). Keep testing 11.* support
+          # without Composer blocking the entire matrix resolve.
+          composer config policy.advisories.block false
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
