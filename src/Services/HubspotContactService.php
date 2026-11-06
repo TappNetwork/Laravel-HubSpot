@@ -194,9 +194,19 @@ class HubspotContactService
 
             // Check if response is an Error object
             if ($hubspotContact instanceof Error) {
-                throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
+                $errorMessage = (string) $hubspotContact->getMessage();
+                $errorCategory = $hubspotContact->getCategory();
+                if ($this->isEmailPropertyAlreadyHasValueError($errorMessage, $errorCategory !== '' ? $errorCategory : null)) {
+                    return $this->recoverFromEmailUniquenessConflict($data, $map, $errorMessage);
+                }
+
+                throw new \Exception('HubSpot API returned an error: '.$errorMessage);
             }
         } catch (ApiException $e) {
+            if ($this->isEmailPropertyAlreadyHasValueError($e->getMessage())) {
+                return $this->recoverFromEmailUniquenessConflict($data, $map, $e->getMessage());
+            }
+
             if ($e->getCode() === 400) {
                 $propertiesArray = $this->buildPropertiesArray($map, $data);
                 Log::error('HubSpot API 400 error - data validation failed', [
@@ -219,6 +229,158 @@ class HubspotContactService
             'id' => $hubspotContact->getId(),
             'properties' => $hubspotContact->getProperties() ?: [],
         ];
+    }
+
+    /**
+     * Detect HubSpot's email uniqueness conflict on contact update.
+     *
+     * Matches "already has that value" for the email property. HubSpot may also
+     * report a CONFLICT / VALIDATION_ERROR category; the message match is the
+     * required signal so we do not rely on a loose "conflict" string.
+     *
+     * Example message:
+     * "Cannot set PropertyValueCoordinates{..., propertyName=email, value=...} on 123. 456 already has that value."
+     *
+     * @param  string|null  $category  Optional HubSpot error category (CONFLICT / VALIDATION_ERROR)
+     */
+    protected function isEmailPropertyAlreadyHasValueError(string $message, ?string $category = null): bool
+    {
+        $normalized = strtolower($message);
+
+        $messageMatches = str_contains($normalized, 'already has that value')
+            && (
+                (bool) preg_match('/property\s*name\s*=\s*email\b/i', $message)
+                || str_contains($normalized, 'propertyname=email')
+            );
+
+        if (! $messageMatches) {
+            return false;
+        }
+
+        // Category from Error::getCategory() may be CONFLICT / VALIDATION_ERROR.
+        // Message match is required; an unexpected category does not override it.
+        if ($category !== null && $category !== '') {
+            $normalizedCategory = strtoupper($category);
+            if (! str_contains($normalizedCategory, 'CONFLICT')
+                && ! str_contains($normalizedCategory, 'VALIDATION')) {
+                Log::info('HubSpot email uniqueness conflict with unexpected error category; treating as handled', [
+                    'category' => $category,
+                ]);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Parse the HubSpot contact id that already owns the email from a uniqueness error message.
+     */
+    protected function parseExistingContactIdFromEmailConflict(string $message): ?string
+    {
+        if (preg_match('/(\d+)\s+already has that value/i', $message, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Relink the local model to the contact that already owns the email and PATCH that contact.
+     *
+     * Does not merge or delete HubSpot contacts. Logs the orphan (previous local
+     * hubspot_id) and survivor (contact that owns the email) so a human can merge
+     * them manually in HubSpot if desired.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $map
+     * @return array{id: string, properties: array<string, mixed>}
+     */
+    protected function recoverFromEmailUniquenessConflict(array $data, array $map, string $errorMessage): array
+    {
+        $orphanHubspotId = isset($data['hubspot_id']) ? (string) $data['hubspot_id'] : null;
+        $parsedSurvivorId = $this->parseExistingContactIdFromEmailConflict($errorMessage);
+
+        $searchData = $data;
+        unset($searchData['hubspot_id']);
+
+        $contact = $this->findContactByMappedEmails($searchData);
+
+        if ($contact === null && $parsedSurvivorId !== null) {
+            try {
+                $fetched = Hubspot::crm()->contacts()->basicApi()->getById($parsedSurvivorId);
+                if (! ($fetched instanceof Error)) {
+                    $contact = $this->normalizeContactResponse($fetched);
+                }
+            } catch (ApiException $e) {
+                if ($e->getCode() !== 404) {
+                    throw $e;
+                }
+            }
+        }
+
+        if ($contact === null || empty($contact['id'])) {
+            throw new \Exception('HubSpot API returned an error: '.$errorMessage);
+        }
+
+        $survivorHubspotId = (string) $contact['id'];
+        $modelId = $data['id'] ?? null;
+
+        Log::warning('HubSpot email uniqueness conflict on update: local model pointed at an orphan contact whose email belongs to another contact. Relinked the model to the survivor and updated it. Merge the orphan into the survivor manually in HubSpot if needed — this package does not merge or delete contacts.', [
+            'orphan_hubspot_id' => $orphanHubspotId,
+            'survivor_hubspot_id' => $survivorHubspotId,
+            'model_id' => $modelId,
+            'email' => $this->getMappedEmailField($data) ?? ($data['email'] ?? 'unknown'),
+        ]);
+
+        $this->updateModelHubspotId(
+            isset($data['id']) ? (int) $data['id'] : null,
+            $survivorHubspotId,
+            is_string($data['modelClass'] ?? null) ? $data['modelClass'] : null
+        );
+
+        $data['hubspot_id'] = $survivorHubspotId;
+        $properties = $this->buildUpdatePropertiesObjectOmittingMatchingEmail($map, $data, $contact);
+
+        $hubspotContact = Hubspot::crm()->contacts()->basicApi()->update($survivorHubspotId, $properties);
+
+        if ($hubspotContact instanceof Error) {
+            throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
+        }
+
+        $this->associateCompanyIfNeeded($survivorHubspotId, $data);
+
+        return [
+            'id' => $hubspotContact->getId(),
+            'properties' => $hubspotContact->getProperties() ?: [],
+        ];
+    }
+
+    /**
+     * Build update properties, omitting email when the target contact already has the same value.
+     *
+     * @param  array<string, mixed>  $map
+     * @param  array<string, mixed>  $data
+     * @param  array{id?: string, properties?: array<string, mixed>}  $existingContact
+     */
+    protected function buildUpdatePropertiesObjectOmittingMatchingEmail(array $map, array $data, array $existingContact): ContactUpdateObject
+    {
+        $propertiesObject = $this->buildUpdatePropertiesObject($map, $data);
+        $properties = $propertiesObject->getProperties();
+
+        if (! isset($properties['email'])) {
+            return $propertiesObject;
+        }
+
+        $existingEmail = $existingContact['properties']['email'] ?? null;
+
+        if (is_string($existingEmail)
+            && strcasecmp(trim($existingEmail), trim((string) $properties['email'])) === 0) {
+            unset($properties['email']);
+
+            return new ContactUpdateObject(['properties' => $properties]);
+        }
+
+        return $propertiesObject;
     }
 
     /**

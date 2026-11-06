@@ -4,6 +4,8 @@ All notable changes to `Laravel-Hubspot` will be documented in this file.
 
 ## Unreleased
 
+* On contact update, when HubSpot rejects an email because another contact already owns it, relink the local model to that survivor contact, PATCH it (skipping email when it already matches), and log a warning with orphan/survivor HubSpot ids and model id. Does not merge or delete contacts via the API — a human can merge them in HubSpot if needed.
+
 ## v2.4.0 - 2026-08-24
 
 ### What's Changed

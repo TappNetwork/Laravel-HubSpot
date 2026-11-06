@@ -1,7 +1,10 @@
 <?php
 
+use HubSpot\Client\Crm\Contacts\ApiException;
+use HubSpot\Client\Crm\Contacts\Model\Error;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObjectInputForCreate;
+use Illuminate\Support\Facades\Log;
 use Tapp\LaravelHubspot\Facades\Hubspot;
 use Tapp\LaravelHubspot\Services\HubspotContactService;
 
@@ -389,6 +392,250 @@ test('it updates contact successfully', function () {
     expect($result)->toBeArray();
     expect($result['id'])->toBe('12345');
     expect($result['properties']['email'])->toBe('test@example.com');
+});
+
+test('it relinks and updates when email already belongs to another HubSpot contact (Error response)', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    $orphanedId = '260844424983';
+    $existingId = '254751827741';
+    $email = 'sarah.roberts@ncchs.org';
+    $conflictMessage = "Cannot set PropertyValueCoordinates{portalId=21668608, objectTypeId=ObjectTypeId{legacyObjectType=CONTACT}, propertyName=email, value={$email}} on {$orphanedId}. {$existingId} already has that value.";
+
+    $conflictError = new Error([
+        'message' => $conflictMessage,
+        'category' => 'VALIDATION_ERROR',
+    ]);
+
+    $existingContact = new SimplePublicObject;
+    $existingContact->setId($existingId);
+    $existingContact->setProperties([
+        'email' => $email,
+        'firstname' => 'Sarah',
+        'lastname' => 'Roberts',
+    ]);
+
+    $mockSearchResponse = Mockery::mock();
+    $mockSearchResponse->shouldReceive('getTotal')->andReturn(1);
+    $mockSearchResponse->shouldReceive('getResults')->andReturn([$existingContact]);
+
+    $mockUpdateResponse = new SimplePublicObject;
+    $mockUpdateResponse->setId($existingId);
+    $mockUpdateResponse->setProperties([
+        'email' => $email,
+        'firstname' => 'Sarah',
+        'lastname' => 'Roberts',
+    ]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with($orphanedId)
+        ->andReturn(['id' => $orphanedId]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($orphanedId, Mockery::any())
+        ->andReturn($conflictError);
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($mockSearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($existingId, Mockery::on(function ($properties) use ($email) {
+            $props = $properties->getProperties();
+
+            // Email already matches the existing contact, so it should be omitted.
+            return ! array_key_exists('email', $props)
+                && ($props['firstname'] ?? null) === 'Sarah'
+                && ($props['lastname'] ?? null) === 'Roberts'
+                && ! str_contains(strtolower(json_encode($props) ?: ''), strtolower($email));
+        }))
+        ->andReturn($mockUpdateResponse);
+
+    Log::shouldReceive('warning')
+        ->once()
+        ->withArgs(function (string $message, array $context) use ($orphanedId, $existingId, $email) {
+            return str_contains($message, 'does not merge or delete')
+                && ($context['orphan_hubspot_id'] ?? null) === $orphanedId
+                && ($context['survivor_hubspot_id'] ?? null) === $existingId
+                && ($context['model_id'] ?? null) === 196
+                && ($context['email'] ?? null) === $email;
+        });
+
+    $data = [
+        'id' => 196,
+        'hubspot_id' => $orphanedId,
+        'email' => $email,
+        'first_name' => 'Sarah',
+        'last_name' => 'Roberts',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    $result = $this->service->updateContact($data);
+
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe($existingId);
+});
+
+test('it relinks and updates when email uniqueness conflict is thrown as ApiException', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    $orphanedId = '111';
+    $existingId = '222';
+    $email = 'dup@example.com';
+    $conflictMessage = "Cannot set PropertyValueCoordinates{portalId=1, objectTypeId=ObjectTypeId{legacyObjectType=CONTACT}, propertyName=email, value={$email}} on {$orphanedId}. {$existingId} already has that value.";
+
+    $existingContact = new SimplePublicObject;
+    $existingContact->setId($existingId);
+    $existingContact->setProperties([
+        'email' => $email,
+        'firstname' => 'Dup',
+        'lastname' => 'User',
+    ]);
+
+    $mockSearchResponse = Mockery::mock();
+    $mockSearchResponse->shouldReceive('getTotal')->andReturn(1);
+    $mockSearchResponse->shouldReceive('getResults')->andReturn([$existingContact]);
+
+    $mockUpdateResponse = new SimplePublicObject;
+    $mockUpdateResponse->setId($existingId);
+    $mockUpdateResponse->setProperties([
+        'email' => $email,
+        'firstname' => 'Dup',
+        'lastname' => 'User',
+    ]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with($orphanedId)
+        ->andReturn(['id' => $orphanedId]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($orphanedId, Mockery::any())
+        ->andThrow(new ApiException($conflictMessage, 400));
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($mockSearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($existingId, Mockery::on(function ($properties) {
+            $props = $properties->getProperties();
+
+            return ! array_key_exists('email', $props)
+                && ($props['firstname'] ?? null) === 'Dup';
+        }))
+        ->andReturn($mockUpdateResponse);
+
+    Log::shouldReceive('warning')
+        ->once()
+        ->withArgs(function (string $message, array $context) use ($orphanedId, $existingId) {
+            return str_contains($message, 'Merge the orphan into the survivor manually')
+                && ($context['orphan_hubspot_id'] ?? null) === $orphanedId
+                && ($context['survivor_hubspot_id'] ?? null) === $existingId
+                && ($context['model_id'] ?? null) === 2;
+        });
+
+    $data = [
+        'id' => 2,
+        'hubspot_id' => $orphanedId,
+        'email' => $email,
+        'first_name' => 'Dup',
+        'last_name' => 'User',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    $result = $this->service->updateContact($data);
+
+    expect($result)->toBeArray();
+    expect($result['id'])->toBe($existingId);
+});
+
+test('it uses parsed contact id when email search misses during uniqueness conflict', function () {
+    config(['hubspot.api_key' => 'dummy-key']);
+
+    $orphanedId = '333';
+    $existingId = '444';
+    $email = 'fallback@example.com';
+    $conflictMessage = "Cannot set PropertyValueCoordinates{propertyName=email, value={$email}} on {$orphanedId}. {$existingId} already has that value.";
+
+    $conflictError = new Error([
+        'message' => $conflictMessage,
+        'category' => 'CONFLICT',
+    ]);
+
+    $existingContact = new SimplePublicObject;
+    $existingContact->setId($existingId);
+    $existingContact->setProperties([
+        'email' => $email,
+        'firstname' => 'Fall',
+        'lastname' => 'Back',
+    ]);
+
+    $emptySearchResponse = Mockery::mock();
+    $emptySearchResponse->shouldReceive('getTotal')->andReturn(0);
+
+    $mockUpdateResponse = new SimplePublicObject;
+    $mockUpdateResponse->setId($existingId);
+    $mockUpdateResponse->setProperties([
+        'email' => $email,
+        'firstname' => 'Fall',
+        'lastname' => 'Back',
+    ]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with($orphanedId)
+        ->andReturn(['id' => $orphanedId]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($orphanedId, Mockery::any())
+        ->andReturn($conflictError);
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($emptySearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->once()
+        ->with($existingId)
+        ->andReturn($existingContact);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($existingId, Mockery::any())
+        ->andReturn($mockUpdateResponse);
+
+    Log::shouldReceive('warning')->once()->withArgs(fn ($message, $context) => ($context['orphan_hubspot_id'] ?? null) === $orphanedId
+        && ($context['survivor_hubspot_id'] ?? null) === $existingId
+        && ($context['model_id'] ?? null) === 3);
+
+    $data = [
+        'id' => 3,
+        'hubspot_id' => $orphanedId,
+        'email' => $email,
+        'first_name' => 'Fall',
+        'last_name' => 'Back',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ];
+
+    $result = $this->service->updateContact($data);
+
+    expect($result['id'])->toBe($existingId);
 });
 
 test('it skips execution when hubspot is disabled', function () {
