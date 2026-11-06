@@ -295,6 +295,17 @@ class HubspotCompanyService
                     throw new \Exception('HubSpot API returned an error: '.$company->getMessage());
                 }
 
+                $returnedCompanyId = (string) $company->getId();
+                if ($returnedCompanyId !== '' && $returnedCompanyId !== $companyId) {
+                    Log::warning('HubSpot company id changed after getById; using survivor id for association (likely merged in HubSpot).', [
+                        'old_hubspot_id' => $companyId,
+                        'new_hubspot_id' => $returnedCompanyId,
+                        'contact_id' => $contactId,
+                        'reason' => 'merged in HubSpot',
+                    ]);
+                    $companyId = $returnedCompanyId;
+                }
+
                 Log::info('Company verified in HubSpot before association', [
                     'company_id' => $companyId,
                     'company_name' => $company->getProperties()['name'] ?? 'unknown',

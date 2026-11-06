@@ -150,8 +150,10 @@ class HubspotContactService
             return $this->createContact($data, is_string($data['modelClass'] ?? null) ? $data['modelClass'] : '');
         }
 
-        // Validate that the contact exists in HubSpot before attempting update
-        if (! $this->validateHubspotContactExists($data['hubspot_id'])) {
+        // Validate that the contact exists in HubSpot before attempting update.
+        // getById on a merged-away id may return the surviving contact with a new id.
+        $existingContact = $this->fetchHubspotContactById((string) $data['hubspot_id']);
+        if ($existingContact === null) {
             // Try to find by email without clearing the invalid ID
             $emailField = $this->getMappedEmailField($data);
             if ($emailField) {
@@ -171,6 +173,12 @@ class HubspotContactService
                     ' does not exist in this HubSpot account and no email provided for lookup: '.($data['email'] ?? 'unknown')
                 );
             }
+        } else {
+            $data = $this->relinkIfHubspotIdChanged(
+                $data,
+                (string) $data['hubspot_id'],
+                (string) $existingContact['id']
+            );
         }
 
         // Use hubspotUpdateMap if defined and not empty, otherwise default to hubspotMap
@@ -221,14 +229,50 @@ class HubspotContactService
             throw $e;
         }
 
+        $returnedId = (string) $hubspotContact->getId();
+        $data = $this->relinkIfHubspotIdChanged($data, (string) $data['hubspot_id'], $returnedId);
+
         // Handle company association
         $this->associateCompanyIfNeeded($data['hubspot_id'], $data);
 
         // Convert SimplePublicObject to array for consistency
         return [
-            'id' => $hubspotContact->getId(),
+            'id' => $returnedId,
             'properties' => $hubspotContact->getProperties() ?: [],
         ];
+    }
+
+    /**
+     * When HubSpot returns a different contact id than requested (typical after a
+     * HubSpot-side merge), persist the returned id on the local model.
+     *
+     * Does not call HubSpot merge or delete endpoints.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function relinkIfHubspotIdChanged(array $data, string $requestedId, string $returnedId): array
+    {
+        if ($returnedId === '' || $requestedId === $returnedId) {
+            return $data;
+        }
+
+        Log::warning('HubSpot contact id changed after API response; updating local model (likely merged in HubSpot).', [
+            'old_hubspot_id' => $requestedId,
+            'new_hubspot_id' => $returnedId,
+            'model_id' => $data['id'] ?? null,
+            'reason' => 'merged in HubSpot',
+        ]);
+
+        $this->updateModelHubspotId(
+            isset($data['id']) ? (int) $data['id'] : null,
+            $returnedId,
+            is_string($data['modelClass'] ?? null) ? $data['modelClass'] : null
+        );
+
+        $data['hubspot_id'] = $returnedId;
+
+        return $data;
     }
 
     /**
@@ -347,10 +391,13 @@ class HubspotContactService
             throw new \Exception('HubSpot API returned an error: '.$hubspotContact->getMessage());
         }
 
-        $this->associateCompanyIfNeeded($survivorHubspotId, $data);
+        $returnedId = (string) $hubspotContact->getId();
+        $data = $this->relinkIfHubspotIdChanged($data, $survivorHubspotId, $returnedId);
+
+        $this->associateCompanyIfNeeded($data['hubspot_id'], $data);
 
         return [
-            'id' => $hubspotContact->getId(),
+            'id' => $returnedId,
             'properties' => $hubspotContact->getProperties() ?: [],
         ];
     }
@@ -415,14 +462,25 @@ class HubspotContactService
     }
 
     /**
-     * Validate that a HubSpot contact exists by ID.
+     * Fetch a HubSpot contact by id, or null when HubSpot returns 404 / Error.
+     *
+     * @return array{id: string, properties: array<string, mixed>}|null
      */
-    protected function validateHubspotContactExists(string $hubspotId): bool
+    protected function fetchHubspotContactById(string $hubspotId): ?array
     {
         try {
-            Hubspot::crm()->contacts()->basicApi()->getById($hubspotId);
+            $contact = Hubspot::crm()->contacts()->basicApi()->getById($hubspotId);
 
-            return true;
+            if ($contact instanceof Error) {
+                Log::warning('HubSpot contact getById returned error', [
+                    'hubspot_id' => $hubspotId,
+                    'error' => $contact->getMessage(),
+                ]);
+
+                return null;
+            }
+
+            return $this->normalizeContactResponse($contact);
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
                 Log::warning('HubSpot contact not found by ID', [
@@ -430,10 +488,18 @@ class HubspotContactService
                     'error' => $e->getMessage(),
                 ]);
 
-                return false;
+                return null;
             }
             throw $e;
         }
+    }
+
+    /**
+     * Validate that a HubSpot contact exists by ID.
+     */
+    protected function validateHubspotContactExists(string $hubspotId): bool
+    {
+        return $this->fetchHubspotContactById($hubspotId) !== null;
     }
 
     /**
@@ -442,21 +508,18 @@ class HubspotContactService
     public function findContact(array $data): ?array
     {
         if (! empty($data['hubspot_id'])) {
-            try {
-                $contact = Hubspot::crm()->contacts()->basicApi()->getById($data['hubspot_id']);
+            $contact = $this->fetchHubspotContactById((string) $data['hubspot_id']);
 
-                // Check if response is an Error object
-                if ($contact instanceof Error) {
-                    throw new \Exception('HubSpot API returned an error: '.$contact->getMessage());
-                }
+            if ($contact !== null) {
+                $this->relinkIfHubspotIdChanged(
+                    $data,
+                    (string) $data['hubspot_id'],
+                    (string) $contact['id']
+                );
 
-                return $this->normalizeContactResponse($contact);
-            } catch (ApiException $e) {
-                if ($e->getCode() !== 404) {
-                    throw $e;
-                }
-                // Don't clear invalid hubspot_id, just continue to email lookup
+                return $contact;
             }
+            // Don't clear invalid hubspot_id, just continue to email lookup
         }
 
         return $this->findContactByMappedEmails($data);
