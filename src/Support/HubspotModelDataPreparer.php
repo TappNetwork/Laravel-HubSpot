@@ -22,6 +22,7 @@ class HubspotModelDataPreparer
 
         $data = [
             'id' => $model->getKey(),
+            'modelClass' => $model::class,
             'hubspot_id' => $model->getHubspotId(),
             'hubspotMap' => $map,
             'hubspotUpdateMap' => $model->getHubspotUpdateMap(),

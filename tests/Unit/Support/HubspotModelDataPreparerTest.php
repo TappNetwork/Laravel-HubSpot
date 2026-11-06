@@ -74,6 +74,7 @@ test('preparer resolves accessor and dot notation mapped fields', function () {
     $data = HubspotModelDataPreparer::fromModel($model);
 
     expect($data['email'])->toBe('user@example.com');
+    expect($data['modelClass'])->toBe(HubspotParityTestModel::class);
     expect($data['organization_name'])->toBe('Acme Health');
     expect($data['type.name'])->toBe('Coordinator');
     expect($data['dynamicProperties']['course_progress'])->toBe('75%');

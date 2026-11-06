@@ -1,5 +1,6 @@
 <?php
 
+use HubSpot\Client\Crm\Contacts\Model\Error;
 use HubSpot\Client\Crm\Contacts\Model\SimplePublicObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
@@ -202,11 +203,124 @@ test('it rebuilds the payload from the live model and treats a stored id as upda
         ->and($job->modelData['email'])->toBe('fresh@example.com');
 });
 
+test('email uniqueness conflict recovery persists survivor hubspot id on the model', function () {
+    config([
+        'hubspot.api_key' => 'dummy-key',
+        'hubspot.disabled' => false,
+        'database.default' => 'testing',
+        'database.connections.testing' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ],
+    ]);
+
+    Schema::create('hubspot_job_conflict_users', function (Blueprint $table): void {
+        $table->id();
+        $table->string('email');
+        $table->string('first_name')->nullable();
+        $table->string('last_name')->nullable();
+        $table->string('hubspot_id')->nullable();
+    });
+
+    $orphanId = '260844424983';
+    $survivorId = '254751827741';
+    $email = 'sarah.roberts@ncchs.org';
+
+    $user = HubspotJobConflictUser::query()->create([
+        'email' => $email,
+        'first_name' => 'Sarah',
+        'last_name' => 'Roberts',
+        'hubspot_id' => $orphanId,
+    ]);
+
+    $conflictMessage = "Cannot set PropertyValueCoordinates{portalId=21668608, objectTypeId=ObjectTypeId{legacyObjectType=CONTACT}, propertyName=email, value={$email}} on {$orphanId}. {$survivorId} already has that value.";
+
+    $conflictError = new Error([
+        'message' => $conflictMessage,
+        'category' => 'VALIDATION_ERROR',
+    ]);
+
+    $existingContact = new SimplePublicObject;
+    $existingContact->setId($survivorId);
+    $existingContact->setProperties([
+        'email' => $email,
+        'firstname' => 'Sarah',
+        'lastname' => 'Roberts',
+    ]);
+
+    $mockSearchResponse = Mockery::mock();
+    $mockSearchResponse->shouldReceive('getTotal')->andReturn(1);
+    $mockSearchResponse->shouldReceive('getResults')->andReturn([$existingContact]);
+
+    $mockUpdateResponse = new SimplePublicObject;
+    $mockUpdateResponse->setId($survivorId);
+    $mockUpdateResponse->setProperties([
+        'email' => $email,
+        'firstname' => 'Sarah',
+        'lastname' => 'Roberts',
+    ]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->getById')
+        ->with($orphanId)
+        ->andReturn(['id' => $orphanId]);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($orphanId, Mockery::any())
+        ->andReturn($conflictError);
+
+    Hubspot::shouldReceive('crm->contacts->searchApi->doSearch')
+        ->once()
+        ->andReturn($mockSearchResponse);
+
+    Hubspot::shouldReceive('crm->contacts->basicApi->update')
+        ->once()
+        ->with($survivorId, Mockery::any())
+        ->andReturn($mockUpdateResponse);
+
+    $job = new SyncHubspotContactJob([
+        'id' => $user->id,
+        'hubspot_id' => $orphanId,
+        'email' => $email,
+        'first_name' => 'Sarah',
+        'last_name' => 'Roberts',
+        'hubspotMap' => [
+            'email' => 'email',
+            'firstname' => 'first_name',
+            'lastname' => 'last_name',
+        ],
+    ], 'update', HubspotJobConflictUser::class);
+
+    $job->handle();
+
+    $user->refresh();
+
+    expect($user->hubspot_id)->toBe($survivorId);
+});
+
 class HubspotJobRefreshUser extends Model implements HubspotModelInterface
 {
     use HubspotContact;
 
     protected $table = 'hubspot_job_refresh_users';
+
+    protected $guarded = [];
+
+    public $timestamps = false;
+
+    public array $hubspotMap = [
+        'email' => 'email',
+        'firstname' => 'first_name',
+        'lastname' => 'last_name',
+    ];
+}
+
+class HubspotJobConflictUser extends Model implements HubspotModelInterface
+{
+    use HubspotContact;
+
+    protected $table = 'hubspot_job_conflict_users';
 
     protected $guarded = [];
 
