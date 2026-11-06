@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.4.2 - 2026-11-06
+
+### What's Changed
+
+* Persist survivor HubSpot id after email conflict recovery: SyncHubspotContactJob and HubspotModelDataPreparer pass modelClass so updateModelHubspotId can save the survivor locally. (#52)
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.4.1...v2.4.2
+
 ## v2.4.1 - 2026-11-06
 
 ### What's Changed
