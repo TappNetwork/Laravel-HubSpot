@@ -83,14 +83,30 @@ class SyncHubspotCompanyJob extends BaseHubspotJob
 
         $properties = $this->buildUpdatePropertiesObject($this->modelData['hubspotMap'] ?? []);
 
+        $requestedId = (string) $this->modelData['hubspot_id'];
+
         $hubspotCompany = Hubspot::crm()->companies()->basicApi()->update(
-            $this->modelData['hubspot_id'],
+            $requestedId,
             $properties
         );
 
         // Check if response is an Error object
         if ($hubspotCompany instanceof Error) {
             throw new \Exception('HubSpot API returned an error: '.$hubspotCompany->getMessage());
+        }
+
+        $returnedId = $this->extractCompanyId($hubspotCompany);
+
+        if ($returnedId !== '' && $returnedId !== $requestedId) {
+            Log::warning('HubSpot company id changed after API response; updating local model (likely merged in HubSpot).', [
+                'old_hubspot_id' => $requestedId,
+                'new_hubspot_id' => $returnedId,
+                'model_id' => $this->modelData['id'] ?? null,
+                'reason' => 'merged in HubSpot',
+            ]);
+
+            $this->updateModelHubspotId($returnedId);
+            $this->modelData['hubspot_id'] = $returnedId;
         }
     }
 
