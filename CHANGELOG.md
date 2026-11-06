@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.4.3 - 2026-11-06
+
+### What's Changed
+
+* Persist HubSpot id when API returns a merged/redirected object: contact getById/update and company update save the survivor id and log old → new with reason `merged in HubSpot`. (#53)
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.4.2...v2.4.3
+
 ## v2.4.2 - 2026-11-06
 
 ### What's Changed
