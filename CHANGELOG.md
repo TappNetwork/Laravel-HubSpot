@@ -2,6 +2,14 @@
 
 All notable changes to `Laravel-Hubspot` will be documented in this file.
 
+## v2.4.1 - 2026-11-06
+
+### What's Changed
+
+* Handle HubSpot email-uniqueness conflict on contact update: relink to the existing contact, update it, log both ids for manual merge; CI fixes. (#51)
+
+**Full Changelog**: https://github.com/TappNetwork/Laravel-HubSpot/compare/v2.4.0...v2.4.1
+
 ## Unreleased
 
 * On contact update, when HubSpot rejects an email because another contact already owns it, relink the local model to that survivor contact, PATCH it (skipping email when it already matches), and log a warning with orphan/survivor HubSpot ids and model id. Does not merge or delete contacts via the API — a human can merge them in HubSpot if needed.
